@@ -1,0 +1,73 @@
+# Birrly — Backend API
+
+Express + TypeScript modular monolith. Clients use REST APIs; Telegram can also parse natural language into structured commands. The LLM never writes to the database.
+
+PostgreSQL is the source of truth for money.
+
+## Stack
+
+- Node.js 20
+- Express
+- TypeScript
+- Prisma + PostgreSQL
+- Redis + BullMQ
+- Zod
+- Decimal.js
+
+## Quick start
+
+From `Birrly/`:
+
+```bash
+cp .env.example .env
+docker compose up -d postgres redis
+npm install
+npx prisma generate
+npx prisma migrate deploy
+npx prisma db seed
+npm run dev
+```
+
+Worker (reminders/notifications):
+
+```bash
+npm run dev:worker
+```
+
+## Layout
+
+```text
+src/
+  app/              HTTP bootstrap, config, DI container, routes
+  modules/          domain modules (controller → service → repository)
+  integrations/     Telegram, LLM, and payments adapters
+  jobs/             BullMQ workers
+  middleware/
+  database/
+  shared/           errors, money, i18n, logger
+```
+
+## Auth
+
+API routes under `/api/v1` expect Telegram Mini App init data:
+
+- `x-telegram-init-data: <initData>`
+- or `Authorization: tma <initData>`
+
+For local testing only, set `DEV_AUTH_ENABLED=true` and send `x-dev-telegram-id`. This is rejected in production.
+
+## Useful endpoints
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/health` | Process alive |
+| GET | `/ready` | Postgres + Redis |
+| POST | `/webhooks/telegram` | Bot webhook |
+| GET | `/api/v1/dashboard` | Monthly snapshot |
+| CRUD | `/api/v1/transactions` | Expenses / income |
+| CRUD | `/api/v1/debts` | Debts and payments |
+| POST | `/api/v1/reminders` | Reminders |
+
+Amounts in JSON are strings, e.g. `"350.00"`.
+
+Natural-language bot messages are parsed into structured commands, validated, then confirmed before a domain service writes to PostgreSQL. Set `LLM_PROVIDER=disabled` to use the regex fallback parser only.

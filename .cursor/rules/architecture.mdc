@@ -1,0 +1,17 @@
+---
+description: Follow PROJECT_ARCHITECTURE.md for all backend work
+alwaysApply: true
+---
+
+This backend is a modular monolith. Before changing architecture, read PROJECT_ARCHITECTURE.md.
+
+Non-negotiable:
+- PostgreSQL is the financial source of truth. Redis is not.
+- Controllers stay thin. Business rules live in services. Database access lives in repositories.
+- AI only returns structured commands. It never writes to the database.
+- Free chat uses the rule-based parser. LLM parsing is Premium (`FEATURE.AI_NATURAL_LANGUAGE`).
+- Never trust client-supplied user IDs. Scope every query by the authenticated user.
+- Never use JavaScript numbers for money. Use Decimal helpers.
+- Financial multi-write operations must be atomic.
+- Telegram/LLM/payment SDKs stay under integrations/, not in domain services.
+- Do not add microservices, bank sync, or Mini App work unless asked.
