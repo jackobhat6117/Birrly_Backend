@@ -13,12 +13,15 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+RUN apk add --no-cache curl
 RUN addgroup -S app && adduser -S app -G app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY prisma ./prisma
+COPY scripts ./scripts
 COPY package.json ./
+RUN chmod +x /app/scripts/docker-api-entrypoint.sh
 USER app
 EXPOSE 3000
 CMD ["node", "dist/app/server.js"]

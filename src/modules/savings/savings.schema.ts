@@ -10,3 +10,7 @@ export const createSavingsGoalSchema = z.object({
 export const contributeSavingsSchema = z.object({
   amount: moneyFieldSchema,
 });
+
+export const updateSavingsPaceSchema = z.object({
+  plannedSpend: moneyFieldSchema,
+});

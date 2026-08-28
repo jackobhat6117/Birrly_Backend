@@ -9,6 +9,7 @@ export type AuthenticatedUser = {
   timezone: string;
   monthlyIncome: string | null;
   paydayDay: number | null;
+  monthlySpendPlan: string | null;
 };
 
 export type TelegramIdentityInput = {
@@ -25,4 +26,5 @@ export type UpdateProfileInput = {
   timezone?: string;
   monthlyIncome?: string | null;
   paydayDay?: number | null;
+  monthlySpendPlan?: string | null;
 };

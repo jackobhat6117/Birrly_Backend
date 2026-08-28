@@ -1,6 +1,6 @@
-import type { SavingsGoal } from '@prisma/client';
+import type { SavingsGoal, TransactionType } from '@prisma/client';
 import type { DbClient } from '@/database/prisma';
-import { addMoney, formatMoney } from '@/shared/utils/money';
+import { addMoney, formatMoney, toMoney } from '@/shared/utils/money';
 import { savingsProgress } from '@/shared/utils/compare';
 import type { SavingsGoalDto } from '@/modules/savings/savings.types';
 
@@ -49,6 +49,37 @@ export class SavingsRepository {
 
   async delete(id: string): Promise<void> {
     await this.db.savingsGoal.delete({ where: { id } });
+  }
+
+  async sumByType(userId: string, type: TransactionType, start: Date, end: Date): Promise<string> {
+    const result = await this.db.transaction.aggregate({
+      where: {
+        userId,
+        type,
+        deletedAt: null,
+        transactionDate: { gte: start, lte: end },
+      },
+      _sum: { amount: true },
+    });
+    return formatMoney(toMoney(result._sum.amount?.toString() ?? '0'));
+  }
+
+  async findUserForPace(userId: string) {
+    return this.db.user.findUnique({
+      where: { id: userId },
+      select: {
+        monthlyIncome: true,
+        monthlySpendPlan: true,
+        currency: true,
+      },
+    });
+  }
+
+  async setMonthlySpendPlan(userId: string, plannedSpend: string | null) {
+    return this.db.user.update({
+      where: { id: userId },
+      data: { monthlySpendPlan: plannedSpend },
+    });
   }
 }
 

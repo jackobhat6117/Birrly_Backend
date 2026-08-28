@@ -13,7 +13,8 @@ export type AuditAction =
   | 'BUDGET_DELETED'
   | 'SAVINGS_GOAL_CREATED'
   | 'SAVINGS_CONTRIBUTED'
-  | 'SAVINGS_GOAL_DELETED';
+  | 'SAVINGS_GOAL_DELETED'
+  | 'SAVINGS_PACE_UPDATED';
 
 export type AuditEntry = {
   userId?: string;

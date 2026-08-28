@@ -4,10 +4,13 @@ import { queueRedis, redis } from '@/database/redis';
 import { logger } from '@/shared/logger/logger';
 import { env } from '@/app/env';
 
-const { app } = createApp();
+const { app, container } = createApp();
 
 const server = app.listen(env.PORT, () => {
   logger.info({ port: env.PORT, env: env.NODE_ENV }, 'API server started');
+  void container.adminService.bootstrap().catch((error: unknown) => {
+    logger.error({ err: error }, 'Admin bootstrap failed');
+  });
 });
 
 const shutdown = async (signal: string) => {

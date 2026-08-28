@@ -41,6 +41,9 @@ export class UserRepository {
     if (input.paydayDay !== undefined) {
       data.paydayDay = input.paydayDay;
     }
+    if (input.monthlySpendPlan !== undefined) {
+      data.monthlySpendPlan = input.monthlySpendPlan;
+    }
     return this.db.user.update({ where: { id }, data });
   }
 }
@@ -57,5 +60,6 @@ export function toAuthenticatedUser(user: User): AuthenticatedUser {
     timezone: user.timezone,
     monthlyIncome: user.monthlyIncome ? formatMoney(user.monthlyIncome.toString()) : null,
     paydayDay: user.paydayDay,
+    monthlySpendPlan: user.monthlySpendPlan ? formatMoney(user.monthlySpendPlan.toString()) : null,
   };
 }

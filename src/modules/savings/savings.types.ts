@@ -1,3 +1,5 @@
+import type { SavingsPace } from '@/shared/utils/savings-pace';
+
 export type SavingsGoalDto = {
   id: string;
   name: string;
@@ -18,4 +20,14 @@ export type CreateSavingsGoalInput = {
 
 export type ContributeSavingsInput = {
   amount: string;
+};
+
+export type { SavingsPace, SavingsPaceNeed, SavingsPaceStatus } from '@/shared/utils/savings-pace';
+
+export type SavingsPaceDto = SavingsPace & {
+  currency: string;
+};
+
+export type UpdateSavingsPaceInput = {
+  plannedSpend: string;
 };

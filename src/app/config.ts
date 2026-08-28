@@ -25,4 +25,10 @@ export const config = {
   corsOrigins: env.CORS_ORIGIN
     ? env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)
     : [],
+  admin: {
+    jwtSecret: env.ADMIN_JWT_SECRET,
+    jwtExpiresSec: env.ADMIN_JWT_EXPIRES_SEC,
+    bootstrapEmail: env.ADMIN_BOOTSTRAP_EMAIL.trim().toLowerCase(),
+    bootstrapPassword: env.ADMIN_BOOTSTRAP_PASSWORD,
+  },
 } as const;

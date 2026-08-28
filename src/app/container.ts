@@ -38,6 +38,10 @@ import { TransactionService } from '@/modules/transactions/transaction.service';
 import { UserController } from '@/modules/users/user.controller';
 import { UserRepository } from '@/modules/users/user.repository';
 import { UserService } from '@/modules/users/user.service';
+import { AnalyticsController } from '@/modules/analytics/analytics.controller';
+import { AnalyticsService } from '@/modules/analytics/analytics.service';
+import { AdminController } from '@/modules/admin/admin.controller';
+import { AdminService } from '@/modules/admin/admin.service';
 
 export function createContainer() {
   const userRepository = new UserRepository(prisma);
@@ -82,6 +86,8 @@ export function createContainer() {
     auditService,
   );
   const savingsService = new SavingsService(savingsRepository, subscriptionService, auditService);
+  const analyticsService = new AnalyticsService(prisma);
+  const adminService = new AdminService(prisma);
   const interpreter = new AiInterpreter(new DisabledLLMProvider());
   const conversations = new ConversationStore(redis);
   const telegramHandler = new TelegramUpdateHandler(
@@ -113,6 +119,8 @@ export function createContainer() {
     budgetService,
     savingsService,
     subscriptionService,
+    analyticsService,
+    adminService,
     userController: new UserController(userService, subscriptionService),
     accountController: new AccountController(accountService),
     categoryController: new CategoryController(categoryService),
@@ -122,6 +130,8 @@ export function createContainer() {
     reportController: new ReportController(reportService),
     budgetController: new BudgetController(budgetService),
     savingsController: new SavingsController(savingsService),
+    analyticsController: new AnalyticsController(analyticsService),
+    adminController: new AdminController(adminService),
     telegramWebhookController: new TelegramWebhookController(telegramHandler, telegramIdempotency),
   };
 }

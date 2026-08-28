@@ -1,6 +1,10 @@
 import type { Request, Response } from 'express';
 import { asyncHandler } from '@/middleware/async-handler';
-import { contributeSavingsSchema, createSavingsGoalSchema } from '@/modules/savings/savings.schema';
+import {
+  contributeSavingsSchema,
+  createSavingsGoalSchema,
+  updateSavingsPaceSchema,
+} from '@/modules/savings/savings.schema';
 import type { SavingsService } from '@/modules/savings/savings.service';
 
 export class SavingsController {
@@ -26,5 +30,16 @@ export class SavingsController {
   remove = asyncHandler(async (req: Request, res: Response) => {
     await this.savings.remove(req.user!.id, req.params.id as string);
     res.status(204).send();
+  });
+
+  pace = asyncHandler(async (req: Request, res: Response) => {
+    const data = await this.savings.pace(req.user!.id, req.user!.timezone);
+    res.json({ data });
+  });
+
+  updatePace = asyncHandler(async (req: Request, res: Response) => {
+    const input = updateSavingsPaceSchema.parse(req.body);
+    const data = await this.savings.updatePace(req.user!.id, req.user!.timezone, input.plannedSpend);
+    res.json({ data });
   });
 }

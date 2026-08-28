@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { moneyFieldSchema } from '@/shared/utils/validation';
 
 export const updateProfileSchema = z.object({
-  language: z.enum(['en', 'am']).optional(),
+  language: z.enum(['en', 'am', 'om', 'ti', 'so']).optional(),
   currency: z.string().min(3).max(8).optional(),
   timezone: z.string().min(1).max(64).optional(),
   monthlyIncome: moneyFieldSchema.nullable().optional(),

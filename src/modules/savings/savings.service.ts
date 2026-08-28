@@ -5,10 +5,14 @@ import type {
   ContributeSavingsInput,
   CreateSavingsGoalInput,
   SavingsGoalDto,
+  SavingsPaceDto,
 } from '@/modules/savings/savings.types';
 import { FEATURE } from '@/shared/constants/features';
 import { DEFAULT_CURRENCY } from '@/shared/constants/app';
 import { ERROR_CODE, NotFoundError } from '@/shared/errors/app-error';
+import { currentMonthRange, nowInZone } from '@/shared/utils/dates';
+import { formatMoney, toMoney } from '@/shared/utils/money';
+import { computeSavingsPace } from '@/shared/utils/savings-pace';
 
 export class SavingsService {
   constructor(
@@ -64,6 +68,52 @@ export class SavingsService {
       entityType: 'savings_goal',
       entityId: goal.id,
     });
+  }
+
+  async pace(userId: string, timezone: string): Promise<SavingsPaceDto> {
+    await this.subscriptions.assertCanAccess(userId, FEATURE.SAVINGS_GOALS);
+    return this.buildPace(userId, timezone);
+  }
+
+  async updatePace(userId: string, timezone: string, plannedSpend: string): Promise<SavingsPaceDto> {
+    await this.subscriptions.assertCanAccess(userId, FEATURE.SAVINGS_GOALS);
+    await this.savings.setMonthlySpendPlan(userId, plannedSpend);
+    await this.audit.record({
+      userId,
+      action: 'SAVINGS_PACE_UPDATED',
+      entityType: 'user',
+      entityId: userId,
+      metadata: { plannedSpend },
+    });
+    return this.buildPace(userId, timezone);
+  }
+
+  private async buildPace(userId: string, timezone: string): Promise<SavingsPaceDto> {
+    const now = nowInZone(timezone);
+    const { start, end } = currentMonthRange(timezone);
+    const [profile, recordedIncome, spent] = await Promise.all([
+      this.savings.findUserForPace(userId),
+      this.savings.sumByType(userId, 'INCOME', start, end),
+      this.savings.sumByType(userId, 'EXPENSE', start, end),
+    ]);
+    const recorded = toMoney(recordedIncome);
+    const profileIncome = profile?.monthlyIncome ? formatMoney(profile.monthlyIncome.toString()) : null;
+    const income = recorded.gt(0) ? formatMoney(recordedIncome) : profileIncome;
+    const plannedSpend = profile?.monthlySpendPlan
+      ? formatMoney(profile.monthlySpendPlan.toString())
+      : null;
+    const daysTotal = now.daysInMonth ?? 30;
+    const daysLeft = daysTotal - now.day + 1;
+    return {
+      ...computeSavingsPace({
+        income,
+        plannedSpend,
+        spent,
+        daysTotal,
+        daysLeft,
+      }),
+      currency: profile?.currency ?? DEFAULT_CURRENCY,
+    };
   }
 
   private async requireOwned(id: string, userId: string) {

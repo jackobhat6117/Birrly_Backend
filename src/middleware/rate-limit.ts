@@ -9,6 +9,15 @@ type RateLimitOptions = {
   max?: number;
 };
 
+function withTimeout<T>(work: Promise<T>, timeoutMs: number): Promise<T> {
+  return Promise.race([
+    work,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error('redis timeout')), timeoutMs);
+    }),
+  ]);
+}
+
 export function rateLimit(options: RateLimitOptions): RequestHandler {
   const windowMs = options.windowMs ?? env.RATE_LIMIT_WINDOW_MS;
   const max = options.max ?? env.RATE_LIMIT_MAX;
@@ -17,9 +26,9 @@ export function rateLimit(options: RateLimitOptions): RequestHandler {
     try {
       const identity = req.user?.id ?? req.ip ?? 'anonymous';
       const key = `ratelimit:${options.prefix}:${identity}`;
-      const current = await redis.incr(key);
+      const current = await withTimeout(redis.incr(key), 400);
       if (current === 1) {
-        await redis.pexpire(key, windowMs);
+        await withTimeout(redis.pexpire(key, windowMs), 400);
       }
 
       res.setHeader('x-ratelimit-limit', String(max));

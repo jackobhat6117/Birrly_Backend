@@ -1,0 +1,129 @@
+# Production stack for a single VPS (Contabo, Hetzner, etc.)
+#
+# Usage:
+#   cp .env.production.example .env
+#   # edit .env (secrets, DOMAIN, TELEGRAM_*)
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# With HTTPS (requires DOMAIN pointing to this server):
+#   docker compose -f docker-compose.prod.yml --profile ssl up -d --build
+#
+# First deploy — seed system categories once:
+#   RUN_DB_SEED=true docker compose -f docker-compose.prod.yml up -d --build api
+#   # or: docker compose -f docker-compose.prod.yml exec api npx prisma db seed
+
+name: birrly
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pfa}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-pfa}
+    volumes:
+      - pfa_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-pfa} -d ${POSTGRES_DB:-pfa}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - pfa_redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pfa}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pfa}?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - '${API_PORT:-3000}:3000'
+    entrypoint: ['/app/scripts/docker-api-entrypoint.sh']
+    command: ['node', 'dist/app/server.js']
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:3000/health']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - internal
+      - public
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pfa}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pfa}?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    command: ['node', 'dist/jobs/worker.js']
+    networks:
+      - internal
+
+  caddy:
+    profiles: ['ssl']
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - public
+
+networks:
+  internal:
+    internal: true
+  public:
+
+volumes:
+  pfa_pgdata:
+  pfa_redis:
+  caddy_data:
+  caddy_config:

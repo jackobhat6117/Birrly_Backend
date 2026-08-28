@@ -26,6 +26,10 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
   AI_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
+  ADMIN_JWT_SECRET: z.string().min(1).default('dev-admin-jwt-secret-change-me'),
+  ADMIN_JWT_EXPIRES_SEC: z.coerce.number().int().positive().default(86_400),
+  ADMIN_BOOTSTRAP_EMAIL: z.string().default(''),
+  ADMIN_BOOTSTRAP_PASSWORD: z.string().default(''),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -36,6 +40,13 @@ if (!parsed.success) {
 
 if (parsed.data.NODE_ENV === 'production' && parsed.data.DEV_AUTH_ENABLED) {
   throw new Error('DEV_AUTH_ENABLED must not be true in production.');
+}
+
+if (
+  parsed.data.NODE_ENV === 'production' &&
+  parsed.data.ADMIN_JWT_SECRET === 'dev-admin-jwt-secret-change-me'
+) {
+  throw new Error('ADMIN_JWT_SECRET must be set in production.');
 }
 
 export const env = parsed.data;

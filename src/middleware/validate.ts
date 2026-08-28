@@ -15,6 +15,12 @@ export const validate =
       return;
     }
 
-    req[part] = result.data as typeof req.body;
+    // Express 5 makes `query` (and sometimes `params`) a getter; assign via defineProperty.
+    Object.defineProperty(req, part, {
+      value: result.data,
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
     next();
   };

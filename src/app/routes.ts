@@ -11,6 +11,7 @@ import { budgetRoutes } from '@/modules/budgets/budget.routes';
 import { savingsRoutes } from '@/modules/savings/savings.routes';
 import { transactionRoutes } from '@/modules/transactions/transaction.routes';
 import { userRoutes } from '@/modules/users/user.routes';
+import { analyticsRoutes } from '@/modules/analytics/analytics.routes';
 
 export function createRoutes(container: AppContainer): Router {
   const router = Router();
@@ -29,6 +30,7 @@ export function createRoutes(container: AppContainer): Router {
   router.use('/reports', reportRoutes(container.reportController));
   router.use('/budgets', budgetRoutes(container.budgetController));
   router.use('/savings-goals', savingsRoutes(container.savingsController));
+  router.use('/analytics', rateLimit({ prefix: 'analytics', max: 60 }), analyticsRoutes(container.analyticsController));
   router.get('/dashboard', container.reportController.dashboard);
 
   return router;

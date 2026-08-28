@@ -5,6 +5,7 @@ import { config } from '@/app/config';
 import { createContainer } from '@/app/container';
 import { health, ready } from '@/app/health';
 import { createRoutes } from '@/app/routes';
+import { adminRoutes } from '@/modules/admin/admin.routes';
 import { env } from '@/app/env';
 import { errorHandler, notFoundHandler } from '@/middleware/error-handler';
 import { rateLimit } from '@/middleware/rate-limit';
@@ -33,6 +34,7 @@ export function createApp() {
     container.telegramWebhookController.receive,
   );
 
+  app.use('/api/v1/admin', adminRoutes(container.adminController));
   app.use('/api/v1', createRoutes(container));
   app.use(notFoundHandler);
   app.use(errorHandler);

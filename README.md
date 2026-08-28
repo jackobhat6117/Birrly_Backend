@@ -71,3 +71,13 @@ For local testing only, set `DEV_AUTH_ENABLED=true` and send `x-dev-telegram-id`
 Amounts in JSON are strings, e.g. `"350.00"`.
 
 Natural-language bot messages are parsed into structured commands, validated, then confirmed before a domain service writes to PostgreSQL. Set `LLM_PROVIDER=disabled` to use the regex fallback parser only.
+
+## Production (single VPS)
+
+See **[DEPLOY.md](./DEPLOY.md)** for Contabo/Hetzner-style deployment with one Compose file:
+
+```bash
+cp .env.production.example .env
+docker compose -f docker-compose.prod.yml --profile ssl up -d --build
+```
+
