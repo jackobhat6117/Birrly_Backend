@@ -1,3 +1,6 @@
+/**
+ * Production-safe. System categories only. Never creates users or money rows.
+ */
 import { PrismaClient } from '@prisma/client';
 import { SYSTEM_CATEGORIES } from '../src/shared/constants/categories';
 
