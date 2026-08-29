@@ -28,6 +28,14 @@ npx prisma db seed
 npm run dev
 ```
 
+`npx prisma db seed` writes **system categories only**. Fake users for QA live on the `oat-env` branch:
+
+```bash
+ALLOW_DEMO_SEED=true npm run prisma:seed:demo
+```
+
+Do not run the demo seed against production / `main`.
+
 Worker (reminders/notifications):
 
 ```bash
