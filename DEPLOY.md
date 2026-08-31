@@ -52,6 +52,7 @@ Set at minimum:
 | `TELEGRAM_BOT_TOKEN` | from @BotFather |
 | `TELEGRAM_WEBHOOK_SECRET` | long random string |
 | `TELEGRAM_WEBHOOK_URL` | `https://api.yourdomain.com/webhooks/telegram` |
+| `CORS_ORIGIN` | `https://birrly.com,https://app.birrly.com` |
 | `ADMIN_JWT_SECRET` | long random string |
 | `ADMIN_BOOTSTRAP_EMAIL` | your admin email |
 | `ADMIN_BOOTSTRAP_PASSWORD` | strong password |
