@@ -7,6 +7,11 @@ import { logger } from '@/shared/logger/logger';
 
 export function createAuthMiddleware(users: UserService): RequestHandler {
   return async (req, _res, next) => {
+    if (req.method === 'OPTIONS') {
+      next();
+      return;
+    }
+
     try {
       const initData =
         req.header('x-telegram-init-data') ??
