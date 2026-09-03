@@ -1,6 +1,7 @@
 import { prisma } from '@/database/prisma';
 import { redis } from '@/database/redis';
-import { DisabledLLMProvider } from '@/integrations/llm/llm.provider';
+import { createLlmProvider } from '@/integrations/llm/llm.provider';
+import { config } from '@/app/config';
 import { ConversationStore } from '@/integrations/telegram/conversation.store';
 import { telegramBotAdapter } from '@/integrations/telegram/telegram-bot.adapter';
 import { TelegramIdempotencyStore } from '@/integrations/telegram/telegram-idempotency.store';
@@ -88,7 +89,7 @@ export function createContainer() {
   const savingsService = new SavingsService(savingsRepository, subscriptionService, auditService);
   const analyticsService = new AnalyticsService(prisma);
   const adminService = new AdminService(prisma);
-  const interpreter = new AiInterpreter(new DisabledLLMProvider());
+  const interpreter = new AiInterpreter(createLlmProvider(config.llm));
   const conversations = new ConversationStore(redis);
   const telegramHandler = new TelegramUpdateHandler(
     userService,

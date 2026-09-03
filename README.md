@@ -72,7 +72,7 @@ For local testing only, set `DEV_AUTH_ENABLED=true` and send `x-dev-telegram-id`
 
 Amounts in JSON are strings, e.g. `"350.00"`.
 
-Natural-language bot messages are parsed into structured commands, validated, then confirmed before a domain service writes to PostgreSQL. Set `LLM_PROVIDER=disabled` to use the regex fallback parser only.
+Natural-language bot messages are parsed into structured commands, validated, then confirmed before a domain service writes to PostgreSQL. Set `LLM_API_KEY` in `.env` (Gemini) for Premium LLM parsing; without a key, the rule-based fallback parser is used.
 
 ## Production (single VPS)
 
