@@ -62,7 +62,8 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - '${API_PORT:-3003}:3000'
+      # Dedicated host port — do not use API_PORT (prod .env sets that to 3000).
+      - '${OAT_API_PORT:-3003}:3000'
     entrypoint: ['/app/scripts/docker-api-entrypoint.sh']
     command: ['node', 'dist/app/server.js']
     healthcheck:

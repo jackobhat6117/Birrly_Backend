@@ -67,6 +67,7 @@ Production and OAT use the **same code**; separation is env-only:
 | | Production (`main`) | OAT (`oat-env`) |
 |---|---|---|
 | `APP_PROFILE` | `production` | `oat` |
+| Host API port | `3000` (`API_PORT`) | `3003` (`OAT_API_PORT`) |
 | Database | `pfa` | `pfa_oat` (isolated volume) |
 | Demo users | No | `@oat_amina`, `@oat_dawit` |
 | Test API | Disabled | `/api/v1/test/*` |
