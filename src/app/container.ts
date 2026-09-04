@@ -92,7 +92,7 @@ export function createContainer() {
   );
   const savingsService = new SavingsService(savingsRepository, subscriptionService, auditService);
   const analyticsService = new AnalyticsService(prisma);
-  const adminService = new AdminService(prisma);
+  const adminService = new AdminService(prisma, feedbackRepository);
   const feedbackService = new FeedbackService(feedbackRepository);
   const interpreter = new AiInterpreter(createLlmProvider(config.llm));
   const conversations = new ConversationStore(redis);
