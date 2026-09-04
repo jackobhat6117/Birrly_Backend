@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon';
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { config } from '@/app/config';
 import type { DbClient } from '@/database/prisma';
 import { DEFAULT_TIMEZONE } from '@/shared/constants/app';
