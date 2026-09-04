@@ -7,9 +7,9 @@ import type {
   SavingsGoalDto,
   SavingsPaceDto,
 } from '@/modules/savings/savings.types';
-import { FEATURE } from '@/shared/constants/features';
+import { FEATURE, FREE_SAVINGS_GOAL_LIMIT } from '@/shared/constants/features';
+import { AppError, ERROR_CODE, NotFoundError } from '@/shared/errors/app-error';
 import { DEFAULT_CURRENCY } from '@/shared/constants/app';
-import { ERROR_CODE, NotFoundError } from '@/shared/errors/app-error';
 import { currentMonthRange, nowInZone } from '@/shared/utils/dates';
 import { formatMoney, toMoney } from '@/shared/utils/money';
 import { computeSavingsPace } from '@/shared/utils/savings-pace';
@@ -29,6 +29,17 @@ export class SavingsService {
 
   async create(userId: string, input: CreateSavingsGoalInput): Promise<SavingsGoalDto> {
     await this.subscriptions.assertCanAccess(userId, FEATURE.SAVINGS_GOALS);
+    const unlimited = await this.subscriptions.canAccess(userId, FEATURE.UNLIMITED_SAVINGS_GOALS);
+    if (!unlimited) {
+      const count = (await this.savings.listForUser(userId)).length;
+      if (count >= FREE_SAVINGS_GOAL_LIMIT) {
+        throw new AppError(
+          ERROR_CODE.SUBSCRIPTION_REQUIRED,
+          'Free plan savings goal limit reached.',
+          402,
+        );
+      }
+    }
     const created = await this.savings.create({
       userId,
       name: input.name.trim(),

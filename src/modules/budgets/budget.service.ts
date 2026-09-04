@@ -7,9 +7,9 @@ import {
   type BudgetRepository,
 } from '@/modules/budgets/budget.repository';
 import type { BudgetDto, CreateBudgetInput, UpdateBudgetInput } from '@/modules/budgets/budget.types';
-import { FEATURE } from '@/shared/constants/features';
+import { FEATURE, FREE_BUDGET_LIMIT } from '@/shared/constants/features';
 import { DEFAULT_CURRENCY } from '@/shared/constants/app';
-import { ConflictError, ERROR_CODE, NotFoundError } from '@/shared/errors/app-error';
+import { AppError, ConflictError, ERROR_CODE, NotFoundError } from '@/shared/errors/app-error';
 import { currentMonthRange, monthRange } from '@/shared/utils/dates';
 
 export class BudgetService {
@@ -35,8 +35,19 @@ export class BudgetService {
 
   async create(userId: string, timezone: string, input: CreateBudgetInput): Promise<BudgetDto> {
     await this.subscriptions.assertCanAccess(userId, FEATURE.BUDGETS);
-    const category = await this.categories.resolve(userId, { categoryId: input.categoryId }, 'EXPENSE');
+    const unlimited = await this.subscriptions.canAccess(userId, FEATURE.UNLIMITED_BUDGETS);
     const { start, end } = currentMonthRange(timezone);
+    if (!unlimited) {
+      const count = (await this.budgets.listForMonth(userId, start)).length;
+      if (count >= FREE_BUDGET_LIMIT) {
+        throw new AppError(
+          ERROR_CODE.SUBSCRIPTION_REQUIRED,
+          'Free plan budget limit reached.',
+          402,
+        );
+      }
+    }
+    const category = await this.categories.resolve(userId, { categoryId: input.categoryId }, 'EXPENSE');
     const existing = await this.budgets.findForCategoryMonth(userId, category.id, start);
     if (existing) {
       throw new ConflictError('A budget for this category already exists this month.');

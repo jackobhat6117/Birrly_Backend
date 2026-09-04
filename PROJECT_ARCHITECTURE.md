@@ -1516,15 +1516,17 @@ Free includes:
 * Payday day of month on the profile (countdown only — do not invent remaining)
 * Rule-based Telegram logging (no LLM): `80 taxi`, `80 ታክሲ`, `Abebe 2000`, `40000 salary`
 * IOU nudge via Telegram share text (client-side `t.me/share`, no money movement)
-* Up to 5 reminders, with bill templates (rent, Wi‑Fi, school, idir) that still count toward the cap
+* Up to 10 reminders, with bill templates (rent, Wi‑Fi, school, idir) that still count toward the cap
+* Up to 5 category budgets per month
+* 1 savings goal
+* This-month report (totals, top categories, largest expenses)
 * Amharic and English
 
 Free excludes:
 
 * LLM / voice / messy-sentence AI (`FEATURE.AI_NATURAL_LANGUAGE`)
-* Unlimited reminders
-* Monthly vs previous-month reports
-* Savings goals and budgets
+* Unlimited reminders, budgets, and savings goals
+* Month-over-month comparison reports (`FEATURE.ADVANCED_REPORTS`)
 * Equb groups
 
 Telegram chat for Free users must call `parseWithFallback` only. Do not call the LLM provider unless `subscriptionService.canAccess(userId, FEATURE.AI_NATURAL_LANGUAGE)` is true.
