@@ -28,14 +28,9 @@ npx prisma db seed
 npm run dev
 ```
 
-`npx prisma db seed` writes **system categories only**. Fake users for QA live on the `oat-env` branch:
+`npx prisma db seed` writes **system categories only**. OAT demo users live in a **separate database** on `APP_PROFILE=oat` — see [OAT / mock database](#oat--mock-database) below.
 
-```bash
-ALLOW_DEMO_SEED=true npm run prisma:seed:demo
-```
-
-Do not run the demo seed against production / `main`.
-`npx prisma db seed` writes **system categories only**. Do not load fake users on `main` or production. QA demo people live on the `oat-env` branch.
+Do not run the demo seed against production (`APP_PROFILE=production` on `main`).
 
 Worker (reminders/notifications):
 
@@ -63,7 +58,34 @@ API routes under `/api/v1` expect Telegram Mini App init data:
 - `x-telegram-init-data: <initData>`
 - or `Authorization: tma <initData>`
 
-For local testing only, set `DEV_AUTH_ENABLED=true` and send `x-dev-telegram-id`. This is rejected in production.
+For local testing only, set `DEV_AUTH_ENABLED=true` and send `x-dev-telegram-id`. On production (`APP_PROFILE=production`) this is blocked. On OAT (`APP_PROFILE=oat`) dev auth is allowed for QA.
+
+## OAT / mock database
+
+Production and OAT use the **same code**; separation is env-only:
+
+| | Production (`main`) | OAT (`oat-env`) |
+|---|---|---|
+| `APP_PROFILE` | `production` | `oat` |
+| Database | `pfa` | `pfa_oat` (isolated volume) |
+| Demo users | No | `@oat_amina`, `@oat_dawit` |
+| Test API | Disabled | `/api/v1/test/*` |
+| Dev auth header | Off | On |
+
+```bash
+cp .env.oat.example .env
+docker compose -f docker-compose.oat.yml up -d --build
+curl http://localhost:3003/api/v1/test/status
+```
+
+Reset demo ledger:
+
+```bash
+curl -X POST http://localhost:3003/api/v1/test/reset-demo \
+  -H "x-test-secret: $TEST_API_SECRET"
+```
+
+Point the mini-app at the OAT API with `VITE_USE_MOCK=false` and `VITE_DEV_TELEGRAM_ID=oat-900001`.
 
 ## Useful endpoints
 
@@ -71,6 +93,8 @@ For local testing only, set `DEV_AUTH_ENABLED=true` and send `x-dev-telegram-id`
 |---|---|---|
 | GET | `/health` | Process alive |
 | GET | `/ready` | Postgres + Redis |
+| GET | `/api/v1/test/status` | OAT only — profile + demo users |
+| POST | `/api/v1/test/reset-demo` | OAT only — reload demo seed (`x-test-secret`) |
 | POST | `/webhooks/telegram` | Bot webhook |
 | GET | `/api/v1/dashboard` | Monthly snapshot |
 | CRUD | `/api/v1/transactions` | Expenses / income |

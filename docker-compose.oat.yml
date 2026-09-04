@@ -1,0 +1,108 @@
+# OAT / QA stack — isolated Postgres + Redis + demo seed + test API.
+# Same codebase as production; behavior is controlled only by env vars.
+#
+#   cp .env.oat.example .env
+#   docker compose -f docker-compose.oat.yml up -d --build
+#
+# Test endpoints (APP_PROFILE=oat only):
+#   GET  /api/v1/test/status
+#   POST /api/v1/test/reset-demo   (header: x-test-secret: <TEST_API_SECRET>)
+#
+# Mini-app (separate repo): VITE_USE_MOCK=false, VITE_DEV_TELEGRAM_ID=oat-900001
+
+name: birrly-oat
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pfa}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-pfa_oat}
+    volumes:
+      - pfa_pgdata_oat:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-pfa} -d ${POSTGRES_DB:-pfa_oat}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - pfa_redis_oat:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      APP_PROFILE: oat
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pfa}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pfa_oat}?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - '${API_PORT:-3003}:3000'
+    entrypoint: ['/app/scripts/docker-api-entrypoint.sh']
+    command: ['node', 'dist/app/server.js']
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:3000/health']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+    networks:
+      - internal
+      - public
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      APP_PROFILE: oat
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pfa}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pfa_oat}?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    command: ['node', 'dist/jobs/worker.js']
+    networks:
+      - internal
+
+networks:
+  internal:
+    internal: true
+  public:
+
+volumes:
+  pfa_pgdata_oat:
+  pfa_redis_oat:

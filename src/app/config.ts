@@ -3,9 +3,12 @@ import { DEFAULT_CURRENCY, DEFAULT_LANGUAGE, DEFAULT_TIMEZONE } from '@/shared/c
 
 export const config = {
   env: env.NODE_ENV,
+  appProfile: env.APP_PROFILE,
+  isOat: env.APP_PROFILE === 'oat',
   isProduction: env.NODE_ENV === 'production',
   isDevelopment: env.NODE_ENV === 'development',
   isTest: env.NODE_ENV === 'test',
+  allowsDevAuth: env.DEV_AUTH_ENABLED && (env.APP_PROFILE === 'oat' || env.NODE_ENV !== 'production'),
   port: env.PORT,
   defaults: {
     currency: DEFAULT_CURRENCY,

@@ -6,6 +6,7 @@ import { createContainer } from '@/app/container';
 import { health, ready } from '@/app/health';
 import { createRoutes } from '@/app/routes';
 import { adminRoutes } from '@/modules/admin/admin.routes';
+import { testRoutes } from '@/modules/test/test.routes';
 import { env } from '@/app/env';
 import { errorHandler, notFoundHandler } from '@/middleware/error-handler';
 import { rateLimit } from '@/middleware/rate-limit';
@@ -42,6 +43,10 @@ export function createApp() {
     rateLimit({ prefix: 'telegram-webhook', max: 300 }),
     container.telegramWebhookController.receive,
   );
+
+  if (config.isOat) {
+    app.use('/api/v1/test', testRoutes(container.testController));
+  }
 
   app.use('/api/v1/admin', adminRoutes(container.adminController));
   app.use('/api/v1', createRoutes(container));

@@ -1,10 +1,16 @@
 import type { Request, Response } from 'express';
+import { config } from '@/app/config';
 import { prisma } from '@/database/prisma';
 import { pingRedis } from '@/database/redis';
 import { asyncHandler } from '@/middleware/async-handler';
 
 export const health = asyncHandler(async (_req: Request, res: Response) => {
-  res.json({ data: { status: 'ok' } });
+  res.json({
+    data: {
+      status: 'ok',
+      profile: config.appProfile,
+    },
+  });
 });
 
 export const ready = asyncHandler(async (_req: Request, res: Response) => {

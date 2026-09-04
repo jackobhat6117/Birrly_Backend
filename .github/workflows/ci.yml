@@ -11,6 +11,7 @@ on:
 #   DEPLOY_USER              — SSH username on the VPS (e.g. root, ubuntu, deploy)
 #   DEPLOY_PASSWORD          — SSH password for the deploy user
 #   DEPLOY_PATH              — Absolute path to this repo on the server (e.g. /opt/Birrly_Backend)
+#   DEPLOY_PATH_OAT          — Optional separate clone for oat-env (e.g. /opt/Birrly_Backend_OAT)
 # Optional:
 #   DEPLOY_SSH_PORT          — SSH port (default 22)
 
@@ -84,4 +85,36 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             docker compose -f docker-compose.prod.yml up -d --build
+            docker image prune -f
+
+  deploy-oat:
+    name: Deploy OAT stack to VPS
+    runs-on: ubuntu-latest
+    needs: ci
+    if: github.ref == 'refs/heads/oat-env' && github.event_name != 'pull_request'
+    environment: oat
+    concurrency:
+      group: backend-deploy-oat
+      cancel-in-progress: false
+    steps:
+      - name: Deploy OAT API stack over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
+          script_stop: true
+          command_timeout: 30m
+          script: |
+            set -euo pipefail
+            REPO="${{ secrets.DEPLOY_PATH_OAT || secrets.DEPLOY_PATH }}"
+            if [ -z "$REPO" ]; then
+              echo "DEPLOY_PATH or DEPLOY_PATH_OAT secret is not set"
+              exit 1
+            fi
+            cd "$REPO"
+            git fetch origin oat-env
+            git reset --hard origin/oat-env
+            docker compose -f docker-compose.oat.yml up -d --build
             docker image prune -f

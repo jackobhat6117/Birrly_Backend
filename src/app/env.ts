@@ -23,6 +23,16 @@ const envSchema = z.object({
     .string()
     .default('false')
     .transform((value) => value === 'true'),
+  APP_PROFILE: z.enum(['production', 'oat']).default('production'),
+  RUN_DEMO_SEED: z
+    .string()
+    .default('false')
+    .transform((value) => value === 'true'),
+  ALLOW_DEMO_SEED: z
+    .string()
+    .default('false')
+    .transform((value) => value === 'true'),
+  TEST_API_SECRET: z.string().default(''),
   CORS_ORIGIN: z.string().default(''),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
@@ -39,8 +49,20 @@ if (!parsed.success) {
   throw new Error(`Invalid environment: ${parsed.error.message}`);
 }
 
-if (parsed.data.NODE_ENV === 'production' && parsed.data.DEV_AUTH_ENABLED) {
-  throw new Error('DEV_AUTH_ENABLED must not be true in production.');
+if (parsed.data.NODE_ENV === 'production' && parsed.data.DEV_AUTH_ENABLED && parsed.data.APP_PROFILE !== 'oat') {
+  throw new Error('DEV_AUTH_ENABLED must not be true in production (except APP_PROFILE=oat).');
+}
+
+if (parsed.data.APP_PROFILE === 'production' && parsed.data.ALLOW_DEMO_SEED) {
+  throw new Error('ALLOW_DEMO_SEED must not be true when APP_PROFILE=production.');
+}
+
+if (parsed.data.APP_PROFILE === 'production' && parsed.data.RUN_DEMO_SEED) {
+  throw new Error('RUN_DEMO_SEED must not be true when APP_PROFILE=production.');
+}
+
+if (parsed.data.APP_PROFILE === 'oat' && parsed.data.RUN_DEMO_SEED && !parsed.data.ALLOW_DEMO_SEED) {
+  throw new Error('RUN_DEMO_SEED requires ALLOW_DEMO_SEED=true on APP_PROFILE=oat.');
 }
 
 if (
