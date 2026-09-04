@@ -7,6 +7,7 @@ import type { TransactionService } from '@/modules/transactions/transaction.serv
 import type { AuthenticatedUser } from '@/modules/users/user.types';
 import type { UserService } from '@/modules/users/user.service';
 import type { SubscriptionService } from '@/modules/subscriptions/subscription.service';
+import { openMiniAppKeyboard } from '@/integrations/telegram/telegram-bootstrap';
 import { FEATURE } from '@/shared/constants/features';
 import type { StructuredCommand } from '@/modules/ai/ai.types';
 import type { ConversationStore } from '@/integrations/telegram/conversation.store';
@@ -53,6 +54,7 @@ export class TelegramUpdateHandler {
       await this.telegram.sendMessage({
         chatId: message.chat.id,
         text: t(user.language, 'welcome'),
+        replyMarkup: openMiniAppKeyboard(),
       });
       return;
     }
