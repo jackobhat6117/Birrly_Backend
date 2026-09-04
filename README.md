@@ -35,6 +35,7 @@ ALLOW_DEMO_SEED=true npm run prisma:seed:demo
 ```
 
 Do not run the demo seed against production / `main`.
+`npx prisma db seed` writes **system categories only**. Do not load fake users on `main` or production. QA demo people live on the `oat-env` branch.
 
 Worker (reminders/notifications):
 
@@ -78,7 +79,7 @@ For local testing only, set `DEV_AUTH_ENABLED=true` and send `x-dev-telegram-id`
 
 Amounts in JSON are strings, e.g. `"350.00"`.
 
-Natural-language bot messages are parsed into structured commands, validated, then confirmed before a domain service writes to PostgreSQL. Set `LLM_PROVIDER=disabled` to use the regex fallback parser only.
+Natural-language bot messages are parsed into structured commands, validated, then confirmed before a domain service writes to PostgreSQL. Set `LLM_API_KEY` in `.env` (Gemini) for Premium LLM parsing; without a key, the rule-based fallback parser is used.
 
 ## Production (single VPS)
 

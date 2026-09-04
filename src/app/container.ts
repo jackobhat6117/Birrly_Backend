@@ -1,6 +1,7 @@
 import { prisma } from '@/database/prisma';
 import { redis } from '@/database/redis';
-import { DisabledLLMProvider } from '@/integrations/llm/llm.provider';
+import { createLlmProvider } from '@/integrations/llm/llm.provider';
+import { config } from '@/app/config';
 import { ConversationStore } from '@/integrations/telegram/conversation.store';
 import { telegramBotAdapter } from '@/integrations/telegram/telegram-bot.adapter';
 import { TelegramIdempotencyStore } from '@/integrations/telegram/telegram-idempotency.store';
@@ -42,6 +43,9 @@ import { AnalyticsController } from '@/modules/analytics/analytics.controller';
 import { AnalyticsService } from '@/modules/analytics/analytics.service';
 import { AdminController } from '@/modules/admin/admin.controller';
 import { AdminService } from '@/modules/admin/admin.service';
+import { FeedbackController } from '@/modules/feedback/feedback.controller';
+import { FeedbackRepository } from '@/modules/feedback/feedback.repository';
+import { FeedbackService } from '@/modules/feedback/feedback.service';
 
 export function createContainer() {
   const userRepository = new UserRepository(prisma);
@@ -53,6 +57,7 @@ export function createContainer() {
   const notificationRepository = new NotificationRepository(prisma);
   const budgetRepository = new BudgetRepository(prisma);
   const savingsRepository = new SavingsRepository(prisma);
+  const feedbackRepository = new FeedbackRepository(prisma);
 
   const auditService = new AuditService(prisma);
   const subscriptionService = new SubscriptionService(prisma);
@@ -87,8 +92,9 @@ export function createContainer() {
   );
   const savingsService = new SavingsService(savingsRepository, subscriptionService, auditService);
   const analyticsService = new AnalyticsService(prisma);
-  const adminService = new AdminService(prisma);
-  const interpreter = new AiInterpreter(new DisabledLLMProvider());
+  const adminService = new AdminService(prisma, feedbackRepository);
+  const feedbackService = new FeedbackService(feedbackRepository);
+  const interpreter = new AiInterpreter(createLlmProvider(config.llm));
   const conversations = new ConversationStore(redis);
   const telegramHandler = new TelegramUpdateHandler(
     userService,
@@ -100,6 +106,7 @@ export function createContainer() {
     conversations,
     telegramBotAdapter,
     subscriptionService,
+    feedbackService,
   );
   const telegramIdempotency = new TelegramIdempotencyStore(prisma);
 
@@ -121,6 +128,7 @@ export function createContainer() {
     subscriptionService,
     analyticsService,
     adminService,
+    feedbackService,
     userController: new UserController(userService, subscriptionService),
     accountController: new AccountController(accountService),
     categoryController: new CategoryController(categoryService),
@@ -132,6 +140,7 @@ export function createContainer() {
     savingsController: new SavingsController(savingsService),
     analyticsController: new AnalyticsController(analyticsService),
     adminController: new AdminController(adminService),
+    feedbackController: new FeedbackController(feedbackService),
     telegramWebhookController: new TelegramWebhookController(telegramHandler, telegramIdempotency),
   };
 }

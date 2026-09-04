@@ -52,6 +52,8 @@ Set at minimum:
 | `TELEGRAM_BOT_TOKEN` | from @BotFather |
 | `TELEGRAM_WEBHOOK_SECRET` | long random string |
 | `TELEGRAM_WEBHOOK_URL` | `https://api.yourdomain.com/webhooks/telegram` |
+| `TELEGRAM_MINI_APP_URL` | `https://birrly.com/mini-app/` |
+| `CORS_ORIGIN` | `https://birrly.com,https://app.birrly.com` |
 | `ADMIN_JWT_SECRET` | long random string |
 | `ADMIN_BOOTSTRAP_EMAIL` | your admin email |
 | `ADMIN_BOOTSTRAP_PASSWORD` | strong password |
@@ -105,9 +107,16 @@ docker compose -f docker-compose.prod.yml exec api npx prisma db seed
 
 Then set `RUN_DB_SEED=false` in `.env` for future restarts.
 
-## 5. Register Telegram webhook
+## 5. Telegram bot (webhook + menu button)
 
-Replace token, secret, and URL:
+On API startup, Birrly registers the webhook and menu button when these are set in `.env`:
+
+- `TELEGRAM_WEBHOOK_URL` + `TELEGRAM_WEBHOOK_SECRET`
+- `TELEGRAM_MINI_APP_URL` (HTTPS Mini App URL)
+
+Check API logs for `Telegram webhook registered`.
+
+Manual registration (if needed):
 
 ```bash
 curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \

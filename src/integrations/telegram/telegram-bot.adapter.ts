@@ -32,6 +32,25 @@ export class TelegramBotAdapter {
     });
   }
 
+  async setWebhook(input: { url: string; secretToken?: string }): Promise<void> {
+    await this.call('setWebhook', {
+      url: input.url,
+      secret_token: input.secretToken,
+      allowed_updates: ['message', 'callback_query'],
+      drop_pending_updates: false,
+    });
+  }
+
+  async setChatMenuButton(input: { text: string; webAppUrl: string }): Promise<void> {
+    await this.call('setChatMenuButton', {
+      menu_button: {
+        type: 'web_app',
+        text: input.text,
+        web_app: { url: input.webAppUrl },
+      },
+    });
+  }
+
   private async call(method: string, payload: Record<string, unknown>): Promise<void> {
     if (!this.isConfigured()) {
       logger.warn({ method }, 'Telegram bot token is not configured');

@@ -16,6 +16,7 @@ export const config = {
     botToken: env.TELEGRAM_BOT_TOKEN,
     webhookSecret: env.TELEGRAM_WEBHOOK_SECRET,
     webhookUrl: env.TELEGRAM_WEBHOOK_URL,
+    miniAppUrl: env.TELEGRAM_MINI_APP_URL.replace(/\/$/, '') || '',
   },
   llm: {
     provider: env.LLM_PROVIDER,

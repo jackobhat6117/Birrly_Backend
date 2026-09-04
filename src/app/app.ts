@@ -19,7 +19,16 @@ export function createApp() {
   app.use(helmet());
   app.use(
     cors({
-      origin: config.corsOrigins.length > 0 ? config.corsOrigins : config.isProduction ? false : true,
+      origin:
+        config.corsOrigins.length > 0 ? config.corsOrigins : config.isProduction ? false : true,
+      allowedHeaders: [
+        'Accept',
+        'Authorization',
+        'Content-Type',
+        'x-dev-telegram-id',
+        'x-telegram-init-data',
+      ],
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     }),
   );
   app.use(express.json({ limit: '1mb' }));

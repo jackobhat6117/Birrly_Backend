@@ -18,12 +18,14 @@ export type MessageKey =
   | 'aiUnavailable'
   | 'unauthorized'
   | 'internalError'
-  | 'languageSet';
+  | 'languageSet'
+  | 'feedbackPrompt'
+  | 'feedbackReceived';
 
 const en: Record<MessageKey, string> = {
   welcome:
     'Welcome to your personal finance assistant.\n\nYou can say things like:\n• 80 taxi\n• I spent 350 birr on lunch\n• Abebe 2000\n• Remind me to pay rent on the 1st\n\nOpen the dashboard anytime from the menu.',
-  help: 'Send a short line such as “80 taxi” or “Abebe 2000”, or use /dashboard.',
+  help: 'Send a short line such as “80 taxi” or “Abebe 2000”, or use /dashboard.\n\nFeedback: /feedback your message',
   askCategory: 'What did you spend the {amount} {currency} on?',
   askAmount: 'How much should I record?',
   askPerson: 'Who is this debt with?',
@@ -42,6 +44,8 @@ const en: Record<MessageKey, string> = {
   unauthorized: 'I could not verify this request.',
   internalError: 'Something went wrong. Please try again.',
   languageSet: 'Language set to English.',
+  feedbackPrompt: 'Send feedback like this:\n/feedback The dashboard is confusing',
+  feedbackReceived: 'Thanks — your feedback was received.',
 };
 
 const am: Record<MessageKey, string> = {
@@ -66,6 +70,8 @@ const am: Record<MessageKey, string> = {
   unauthorized: 'ጥያቄውን ማረጋገጥ አልተቻለም።',
   internalError: 'ችግር ተፈጥሯል። እንደገና ይሞክሩ።',
   languageSet: 'ቋንቋ ወደ አማርኛ ተቀይሯል።',
+  feedbackPrompt: 'አስተያየት እንዲህ ይላኩ፦\n/feedback ዳሽቦርድ ለመጠቀም አስቸጋሪ ነው',
+  feedbackReceived: 'አመሰግናለሁ — አስተያየትዎ ተቀብሏል።',
 };
 
 const catalogs: Record<string, Record<MessageKey, string>> = { en, am };

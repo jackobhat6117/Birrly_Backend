@@ -34,34 +34,46 @@ export class ReportService {
   }
 
   async monthly(userId: string, _timezone: string, year: number, month: number) {
-    await this.subscriptions.assertCanAccess(userId, FEATURE.ADVANCED_REPORTS);
-
+    const advanced = await this.subscriptions.canAccess(userId, FEATURE.ADVANCED_REPORTS);
     const { start, end } = monthRange(year, month);
-    const previousMonth = month === 1 ? 12 : month - 1;
-    const previousYear = month === 1 ? year - 1 : year;
-    const previous = monthRange(previousYear, previousMonth);
 
-    const [income, expenses, prevIncome, prevExpenses, topCategories, largest] = await Promise.all([
+    const [income, expenses, topCategories, largest] = await Promise.all([
       this.sumByType(userId, 'INCOME', start, end),
       this.sumByType(userId, 'EXPENSE', start, end),
-      this.sumByType(userId, 'INCOME', previous.start, previous.end),
-      this.sumByType(userId, 'EXPENSE', previous.start, previous.end),
       this.topExpenseCategories(userId, start, end),
       this.largestExpenses(userId, start, end),
     ]);
 
     const savings = subtractMoney(income, expenses);
-    const prevSavings = subtractMoney(prevIncome, prevExpenses);
     const savingsRate = toMoney(income).eq(0)
       ? '0.00'
       : toMoney(savings).div(income).mul(100).toFixed(2);
 
-    return {
+    const base = {
       period: { year, month, start: start.toISOString(), end: end.toISOString() },
       income: formatMoney(income),
       expenses: formatMoney(expenses),
       savings: formatMoney(savings),
       savingsRate,
+      topCategories,
+      largestExpenses: largest,
+    };
+
+    if (!advanced) {
+      return base;
+    }
+
+    const previousMonth = month === 1 ? 12 : month - 1;
+    const previousYear = month === 1 ? year - 1 : year;
+    const previous = monthRange(previousYear, previousMonth);
+    const [prevIncome, prevExpenses] = await Promise.all([
+      this.sumByType(userId, 'INCOME', previous.start, previous.end),
+      this.sumByType(userId, 'EXPENSE', previous.start, previous.end),
+    ]);
+    const prevSavings = subtractMoney(prevIncome, prevExpenses);
+
+    return {
+      ...base,
       previousMonth: {
         income: formatMoney(prevIncome),
         expenses: formatMoney(prevExpenses),
@@ -72,8 +84,6 @@ export class ReportService {
         expenses: compareMoney(expenses, prevExpenses),
         remaining: compareMoney(savings, prevSavings),
       },
-      topCategories,
-      largestExpenses: largest,
     };
   }
 

@@ -1,6 +1,7 @@
 import { createApp } from '@/app/app';
 import { prisma } from '@/database/prisma';
 import { queueRedis, redis } from '@/database/redis';
+import { bootstrapTelegramBot } from '@/integrations/telegram/telegram-bootstrap';
 import { logger } from '@/shared/logger/logger';
 import { env } from '@/app/env';
 
@@ -10,6 +11,9 @@ const server = app.listen(env.PORT, () => {
   logger.info({ port: env.PORT, env: env.NODE_ENV }, 'API server started');
   void container.adminService.bootstrap().catch((error: unknown) => {
     logger.error({ err: error }, 'Admin bootstrap failed');
+  });
+  void bootstrapTelegramBot().catch((error: unknown) => {
+    logger.error({ err: error }, 'Telegram bootstrap failed');
   });
 });
 

@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon';
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { config } from '@/app/config';
 import type { DbClient } from '@/database/prisma';
 import { DEFAULT_TIMEZONE } from '@/shared/constants/app';
@@ -13,9 +13,13 @@ import {
   verifyPassword,
 } from '@/modules/admin/admin.auth';
 import { effectivePlan, funnelSteps } from '@/modules/admin/admin.funnel';
+import type { FeedbackRepository } from '@/modules/feedback/feedback.repository';
 
 export class AdminService {
-  constructor(private readonly db: DbClient) {}
+  constructor(
+    private readonly db: DbClient,
+    private readonly feedbackRepository: FeedbackRepository,
+  ) {}
 
   async bootstrap(): Promise<void> {
     const email = config.admin.bootstrapEmail;
@@ -226,6 +230,10 @@ export class AdminService {
       })),
       meta: paginationMeta(total, page, pageSize),
     };
+  }
+
+  listFeedback(query: Parameters<FeedbackRepository['listForAdmin']>[0]) {
+    return this.feedbackRepository.listForAdmin(query);
   }
 
   async getUser(id: string) {
