@@ -3,7 +3,7 @@ import type { AdminController } from '@/modules/admin/admin.controller';
 import { createAdminAuthMiddleware } from '@/middleware/admin-auth';
 import { rateLimit } from '@/middleware/rate-limit';
 import { validate } from '@/middleware/validate';
-import { adminLoginSchema, adminUserIdSchema, adminUsersQuerySchema } from '@/modules/admin/admin.schema';
+import { adminFeedbackQuerySchema, adminLoginSchema, adminUserIdSchema, adminUsersQuerySchema } from '@/modules/admin/admin.schema';
 
 export function adminRoutes(controller: AdminController): Router {
   const router = Router();
@@ -22,6 +22,7 @@ export function adminRoutes(controller: AdminController): Router {
   router.get('/funnel', controller.funnel);
   router.get('/users', validate(adminUsersQuerySchema, 'query'), controller.users);
   router.get('/users/:id', validate(adminUserIdSchema, 'params'), controller.user);
+  router.get('/feedback', validate(adminFeedbackQuerySchema, 'query'), controller.feedback);
 
   return router;
 }

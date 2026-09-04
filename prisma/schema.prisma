@@ -148,6 +148,7 @@ model User {
   aiInteractions         AiInteraction[]
   auditLogs              AuditLog[]
   productEvents          ProductEvent[]
+  feedback               Feedback[]
 
   @@map("users")
 }
@@ -456,6 +457,21 @@ enum ProductEventName {
   @@map("product_event_name")
 }
 
+enum FeedbackCategory {
+  BUG
+  IDEA
+  OTHER
+
+  @@map("feedback_category")
+}
+
+enum FeedbackSource {
+  APP
+  BOT
+
+  @@map("feedback_source")
+}
+
 model ProductEvent {
   id        String           @id @default(uuid()) @map("id")
   userId    String           @map("user_id")
@@ -469,4 +485,20 @@ model ProductEvent {
   @@index([name, createdAt])
   @@index([screen, createdAt])
   @@map("product_events")
+}
+
+model Feedback {
+  id          String           @id @default(uuid()) @map("id")
+  userId      String           @map("user_id")
+  category    FeedbackCategory @default(OTHER) @map("category")
+  message     String           @map("message")
+  source      FeedbackSource   @map("source")
+  pageContext String?          @map("page_context")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@map("feedback")
 }

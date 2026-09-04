@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { asyncHandler } from '@/middleware/async-handler';
 import {
+  adminFeedbackQuerySchema,
   adminLoginSchema,
   adminUserIdSchema,
   adminUsersQuerySchema,
@@ -37,5 +38,11 @@ export class AdminController {
   user = asyncHandler(async (req: Request, res: Response) => {
     const params = adminUserIdSchema.parse(req.params);
     res.json({ data: await this.admin.getUser(params.id) });
+  });
+
+  feedback = asyncHandler(async (req: Request, res: Response) => {
+    const query = adminFeedbackQuerySchema.parse(req.query);
+    const result = await this.admin.listFeedback(query);
+    res.json(result);
   });
 }

@@ -7,6 +7,7 @@ import type { TransactionService } from '@/modules/transactions/transaction.serv
 import type { AuthenticatedUser } from '@/modules/users/user.types';
 import type { UserService } from '@/modules/users/user.service';
 import type { SubscriptionService } from '@/modules/subscriptions/subscription.service';
+import type { FeedbackService } from '@/modules/feedback/feedback.service';
 import { openMiniAppKeyboard } from '@/integrations/telegram/telegram-bootstrap';
 import { FEATURE } from '@/shared/constants/features';
 import type { StructuredCommand } from '@/modules/ai/ai.types';
@@ -28,6 +29,7 @@ export class TelegramUpdateHandler {
     private readonly conversations: ConversationStore,
     private readonly telegram: TelegramBotAdapter,
     private readonly subscriptions: SubscriptionService,
+    private readonly feedback: FeedbackService,
   ) {}
 
   async handle(update: TelegramUpdate): Promise<void> {
@@ -63,6 +65,24 @@ export class TelegramUpdateHandler {
       await this.telegram.sendMessage({
         chatId: message.chat.id,
         text: t(user.language, 'help'),
+      });
+      return;
+    }
+
+    if (text.startsWith('/feedback')) {
+      const body = text.replace(/^\/feedback(?:@\S+)?\s*/i, '').trim();
+      if (!body) {
+        await this.telegram.sendMessage({
+          chatId: message.chat.id,
+          text: t(user.language, 'feedbackPrompt'),
+        });
+        return;
+      }
+
+      await this.feedback.create(user.id, { message: body, category: 'OTHER' }, 'BOT');
+      await this.telegram.sendMessage({
+        chatId: message.chat.id,
+        text: t(user.language, 'feedbackReceived'),
       });
       return;
     }
