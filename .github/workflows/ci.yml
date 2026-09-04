@@ -9,7 +9,7 @@ on:
 
 # Required GitHub secrets (Settings → Secrets and variables → Actions):
 #   DEPLOY_USER              — SSH username on the VPS (e.g. root, ubuntu, deploy)
-#   DEPLOY_SSH_PRIVATE_KEY   — Private key for SSH (PEM, including BEGIN/END lines)
+#   DEPLOY_PASSWORD          — SSH password for the deploy user
 #   DEPLOY_PATH              — Absolute path to this repo on the server (e.g. /opt/Birrly_Backend)
 # Optional:
 #   DEPLOY_SSH_PORT          — SSH port (default 22)
@@ -69,7 +69,7 @@ jobs:
         with:
           host: ${{ env.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
           port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
           script_stop: true
           command_timeout: 30m
