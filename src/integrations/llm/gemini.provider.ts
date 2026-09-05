@@ -88,6 +88,7 @@ export class GeminiLlmProvider implements LLMProvider {
           responseMimeType: 'application/json',
         },
       }),
+      signal: AbortSignal.timeout(20_000),
     });
 
     const payload = (await response.json()) as GeminiGenerateResponse;

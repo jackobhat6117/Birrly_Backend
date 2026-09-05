@@ -40,31 +40,50 @@ export class TelegramUpdateHandler {
   ) {}
 
   async handle(update: TelegramUpdate): Promise<void> {
-    if (update.callback_query) {
-      await this.handleCallback(update);
-      return;
+    const chatId = this.resolveChatId(update);
+    let language = 'en';
+
+    try {
+      if (update.callback_query) {
+        await this.handleCallback(update);
+        return;
+      }
+
+      const message = update.message;
+      if (!message?.from || !message.text) {
+        return;
+      }
+
+      const user = await this.users.ensureFromTelegram({
+        telegramId: String(message.from.id),
+        username: message.from.username,
+        firstName: message.from.first_name,
+        lastName: message.from.last_name,
+        languageCode: message.from.language_code,
+      });
+      language = user.language;
+
+      const slash = parseSlashCommand(message.text);
+      if (slash) {
+        await this.handleSlashCommand(message.chat.id, user, slash.command, slash.args);
+        return;
+      }
+
+      await this.handleNaturalLanguage(message.chat.id, user, message.text.trim());
+    } catch (error) {
+      logger.error({ err: error, updateId: update.update_id, chatId }, 'Telegram handler failed');
+      if (chatId) {
+        await this.telegram.sendMessage({
+          chatId,
+          text: t(language, 'internalError'),
+          parseMode: 'HTML',
+        });
+      }
     }
+  }
 
-    const message = update.message;
-    if (!message?.from || !message.text) {
-      return;
-    }
-
-    const user = await this.users.ensureFromTelegram({
-      telegramId: String(message.from.id),
-      username: message.from.username,
-      firstName: message.from.first_name,
-      lastName: message.from.last_name,
-      languageCode: message.from.language_code,
-    });
-
-    const slash = parseSlashCommand(message.text);
-    if (slash) {
-      await this.handleSlashCommand(message.chat.id, user, slash.command, slash.args);
-      return;
-    }
-
-    await this.handleNaturalLanguage(message.chat.id, user, message.text.trim());
+  private resolveChatId(update: TelegramUpdate): number | undefined {
+    return update.message?.chat.id ?? update.callback_query?.message?.chat.id;
   }
 
   private async handleSlashCommand(

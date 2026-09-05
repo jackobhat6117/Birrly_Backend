@@ -9,6 +9,10 @@ type TelegramSendMessageInput = {
   parseMode?: 'HTML' | 'MarkdownV2';
 };
 
+function stripHtml(text: string): string {
+  return text.replace(/<[^>]+>/g, '');
+}
+
 export class TelegramBotAdapter {
   constructor(private readonly botToken: string) {}
 
@@ -17,12 +21,24 @@ export class TelegramBotAdapter {
   }
 
   async sendMessage(input: TelegramSendMessageInput): Promise<void> {
-    await this.call('sendMessage', {
-      chat_id: input.chatId,
-      text: input.text,
-      parse_mode: input.parseMode,
-      reply_markup: input.replyMarkup,
-    });
+    try {
+      await this.call('sendMessage', {
+        chat_id: input.chatId,
+        text: input.text,
+        parse_mode: input.parseMode,
+        reply_markup: input.replyMarkup,
+      });
+    } catch (error) {
+      if (!input.parseMode) {
+        throw error;
+      }
+      logger.warn({ err: error, chatId: input.chatId }, 'Telegram HTML message failed; retrying plain text');
+      await this.call('sendMessage', {
+        chat_id: input.chatId,
+        text: stripHtml(input.text),
+        reply_markup: input.replyMarkup,
+      });
+    }
   }
 
   async answerCallbackQuery(callbackQueryId: string, text?: string): Promise<void> {

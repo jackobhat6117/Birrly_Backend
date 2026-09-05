@@ -37,17 +37,25 @@ export class AiUsageService {
   }
 
   async getUsedToday(userId: string): Promise<number> {
-    const raw = await this.redis.get(this.dailyKey(userId));
-    return raw ? Number(raw) : 0;
+    try {
+      const raw = await this.redis.get(this.dailyKey(userId));
+      return raw ? Number(raw) : 0;
+    } catch {
+      return 0;
+    }
   }
 
   async recordSuccessfulLlmParse(userId: string): Promise<number> {
-    const key = this.dailyKey(userId);
-    const count = await this.redis.incr(key);
-    if (count === 1) {
-      await this.redis.expire(key, 86_400);
+    try {
+      const key = this.dailyKey(userId);
+      const count = await this.redis.incr(key);
+      if (count === 1) {
+        await this.redis.expire(key, 86_400);
+      }
+      return count;
+    } catch {
+      return 0;
     }
-    return count;
   }
 
   canUseLlm(status: AiUsageStatus, llmEnabled: boolean): boolean {
