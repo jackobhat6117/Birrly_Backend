@@ -32,4 +32,9 @@ export class DebtController {
     const data = await this.debts.listPayments(req.user!.id, req.params.id as string);
     res.json({ data });
   });
+
+  nudge = asyncHandler(async (req: Request, res: Response) => {
+    const data = await this.debts.recordNudge(req.user!.id, req.params.id as string);
+    res.json({ data });
+  });
 }

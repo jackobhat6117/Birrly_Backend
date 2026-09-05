@@ -8,5 +8,6 @@ export function debtRoutes(controller: DebtController): Router {
   router.get('/:id', controller.get);
   router.post('/:id/payments', controller.pay);
   router.get('/:id/payments', controller.history);
+  router.post('/:id/nudge', controller.nudge);
   return router;
 }

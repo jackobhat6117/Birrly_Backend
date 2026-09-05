@@ -24,5 +24,6 @@ export type DebtDto = {
   dueDate: string | null;
   note: string | null;
   status: DebtStatus;
+  lastNudgedAt: string | null;
   createdAt: string;
 };

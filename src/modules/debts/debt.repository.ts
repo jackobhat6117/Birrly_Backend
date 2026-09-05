@@ -56,6 +56,10 @@ export class DebtRepository {
       orderBy: { paidAt: 'desc' },
     });
   }
+
+  async recordNudge(id: string): Promise<Debt> {
+    return this.db.debt.update({ where: { id }, data: { lastNudgedAt: new Date() } });
+  }
 }
 
 export function toDebtDto(row: Debt): DebtDto {
@@ -69,6 +73,7 @@ export function toDebtDto(row: Debt): DebtDto {
     dueDate: row.dueDate ? row.dueDate.toISOString().slice(0, 10) : null,
     note: row.note,
     status: row.status,
+    lastNudgedAt: row.lastNudgedAt ? row.lastNudgedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
   };
 }

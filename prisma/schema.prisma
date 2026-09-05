@@ -250,6 +250,7 @@ model Debt {
   dueDate         DateTime?  @map("due_date") @db.Date
   note            String?    @map("note")
   status          DebtStatus @default(OPEN) @map("status")
+  lastNudgedAt    DateTime?  @map("last_nudged_at")
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
 

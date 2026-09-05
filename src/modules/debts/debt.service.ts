@@ -133,4 +133,24 @@ export class DebtService {
       paidAt: row.paidAt.toISOString(),
     }));
   }
+
+  /**
+   * Records that the user opened Telegram's share sheet to nudge someone about
+   * this debt. There is no captured Telegram identity for the other side of an
+   * IOU, so this cannot confirm delivery — it only timestamps the attempt, so
+   * the Mini App can show "Nudged 2 days ago" instead of leaving the user to
+   * guess whether they already asked.
+   */
+  async recordNudge(userId: string, debtId: string): Promise<DebtDto> {
+    await this.subscriptions.assertCanAccess(userId, FEATURE.DEBT_TRACKING);
+    const debt = await this.debts.findByIdForUser(debtId, userId);
+    if (!debt) {
+      throw new NotFoundError(ERROR_CODE.DEBT_NOT_FOUND, 'Debt was not found.');
+    }
+    if (debt.status === 'SETTLED') {
+      throw new AppError(ERROR_CODE.VALIDATION_FAILED, 'This debt is already settled.', 400);
+    }
+    const updated = await this.debts.recordNudge(debtId);
+    return toDebtDto(updated);
+  }
 }
