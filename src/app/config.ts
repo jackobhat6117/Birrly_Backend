@@ -35,4 +35,8 @@ export const config = {
     bootstrapEmail: env.ADMIN_BOOTSTRAP_EMAIL.trim().toLowerCase(),
     bootstrapPassword: env.ADMIN_BOOTSTRAP_PASSWORD,
   },
+  ai: {
+    /** Free-plan LLM parses per user per UTC day. Premium is unlimited. */
+    dailyLimit: env.AI_RATE_LIMIT_MAX,
+  },
 } as const;

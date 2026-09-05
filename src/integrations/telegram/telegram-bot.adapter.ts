@@ -51,6 +51,27 @@ export class TelegramBotAdapter {
     });
   }
 
+  async setMyCommands(commands: { command: string; description: string }[], languageCode?: string): Promise<void> {
+    await this.call('setMyCommands', {
+      commands,
+      ...(languageCode ? { language_code: languageCode } : {}),
+    });
+  }
+
+  async setMyDescription(description: string, languageCode?: string): Promise<void> {
+    await this.call('setMyDescription', {
+      description,
+      ...(languageCode ? { language_code: languageCode } : {}),
+    });
+  }
+
+  async setMyShortDescription(shortDescription: string, languageCode?: string): Promise<void> {
+    await this.call('setMyShortDescription', {
+      short_description: shortDescription,
+      ...(languageCode ? { language_code: languageCode } : {}),
+    });
+  }
+
   private async call(method: string, payload: Record<string, unknown>): Promise<void> {
     if (!this.isConfigured()) {
       logger.warn({ method }, 'Telegram bot token is not configured');

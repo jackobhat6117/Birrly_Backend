@@ -104,7 +104,7 @@ Point the mini-app at the OAT API with `VITE_USE_MOCK=false` and `VITE_DEV_TELEG
 
 Amounts in JSON are strings, e.g. `"350.00"`.
 
-Natural-language bot messages are parsed into structured commands, validated, then confirmed before a domain service writes to PostgreSQL. Set `LLM_API_KEY` in `.env` (Gemini) for Premium LLM parsing; without a key, the rule-based fallback parser is used.
+Natural-language bot messages are parsed with Gemini when `LLM_API_KEY` is set. **Free** users get `AI_RATE_LIMIT_MAX` LLM parses per UTC day; **Premium** is unlimited. The rule-based parser is still used as fallback when the LLM fails or free quota is exhausted.
 
 ## Production (single VPS)
 

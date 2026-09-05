@@ -109,12 +109,14 @@ Then set `RUN_DB_SEED=false` in `.env` for future restarts.
 
 ## 5. Telegram bot (webhook + menu button)
 
-On API startup, Birrly registers the webhook and menu button when these are set in `.env`:
+On API startup, Birrly registers the webhook, **command menu**, bot profile text, and menu button when these are set in `.env`:
 
 - `TELEGRAM_WEBHOOK_URL` + `TELEGRAM_WEBHOOK_SECRET`
 - `TELEGRAM_MINI_APP_URL` (HTTPS Mini App URL)
 
-Check API logs for `Telegram webhook registered`.
+Registered commands: `/start`, `/dashboard`, `/help`, `/feedback` (English + Amharic descriptions).
+
+Check API logs for `Telegram webhook registered` and `Telegram bot commands and profile text registered`.
 
 Manual registration (if needed):
 

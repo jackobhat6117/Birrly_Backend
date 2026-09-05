@@ -9,10 +9,10 @@ export class AiInterpreter {
 
   async interpret(
     input: ParseTextInput,
-    options: { allowLlm?: boolean } = {},
+    options: { useLlm?: boolean } = {},
   ): Promise<StructuredCommand> {
-    const allowLlm = options.allowLlm ?? true;
-    if (allowLlm && this.llmProvider.isEnabled()) {
+    const useLlm = options.useLlm ?? true;
+    if (useLlm && this.llmProvider.isEnabled()) {
       try {
         const parsed = await this.llmProvider.parse(input);
         return structuredCommandSchema.parse(parsed);

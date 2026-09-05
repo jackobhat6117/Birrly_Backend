@@ -12,6 +12,8 @@ import { AccountController } from '@/modules/accounts/account.controller';
 import { AccountRepository } from '@/modules/accounts/account.repository';
 import { AccountService } from '@/modules/accounts/account.service';
 import { AiInterpreter } from '@/modules/ai/ai.interpreter';
+import { AiParseService } from '@/modules/ai/ai-parse.service';
+import { AiUsageService } from '@/modules/ai/ai-usage.service';
 import { AuditService } from '@/modules/audit/audit.service';
 import { CategoryController } from '@/modules/categories/category.controller';
 import { CategoryRepository } from '@/modules/categories/category.repository';
@@ -95,19 +97,22 @@ export function createContainer() {
   const analyticsService = new AnalyticsService(prisma);
   const adminService = new AdminService(prisma, feedbackRepository);
   const feedbackService = new FeedbackService(feedbackRepository);
-  const interpreter = new AiInterpreter(createLlmProvider(config.llm));
+  const llmProvider = createLlmProvider(config.llm);
+  const interpreter = new AiInterpreter(llmProvider);
+  const aiUsage = new AiUsageService(redis, config.ai.dailyLimit);
+  const aiParse = new AiParseService(interpreter, aiUsage, subscriptionService, llmProvider.isEnabled());
   const conversations = new ConversationStore(redis);
   const telegramHandler = new TelegramUpdateHandler(
     userService,
-    interpreter,
+    aiParse,
     transactionService,
     debtService,
     reminderService,
     reportService,
     conversations,
     telegramBotAdapter,
-    subscriptionService,
     feedbackService,
+    config.ai.dailyLimit,
   );
   const telegramIdempotency = new TelegramIdempotencyStore(prisma);
 
