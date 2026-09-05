@@ -11,6 +11,7 @@ export type StructuredIntent =
   | 'QUERY_DEBT'
   | 'QUERY_REPORT'
   | 'GREET'
+  | 'WELLBEING'
   | 'THANKS'
   | 'UNKNOWN';
 

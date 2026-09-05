@@ -77,10 +77,18 @@ describe('fallback parser', () => {
     expect(result.debtType).toBe('OWED_TO_ME');
   });
 
-  it('parses greetings and balance questions', () => {
+  it('parses greetings, wellbeing, and balance questions', () => {
     expect(parseWithFallback({ text: 'Hi Birrly', language: 'en', currency: 'ETB' }).intent).toBe('GREET');
     expect(parseWithFallback({ text: 'hello', language: 'en', currency: 'ETB' }).intent).toBe('GREET');
+    expect(parseWithFallback({ text: 'how are you', language: 'en', currency: 'ETB' }).intent).toBe('WELLBEING');
     expect(parseWithFallback({ text: 'thanks', language: 'en', currency: 'ETB' }).intent).toBe('THANKS');
+
+    expect(
+      parseWithFallback({ text: 'how much money is left', language: 'en', currency: 'ETB' }).intent,
+    ).toBe('QUERY_BALANCE');
+    expect(parseWithFallback({ text: 'how much is left', language: 'en', currency: 'ETB' }).intent).toBe(
+      'QUERY_BALANCE',
+    );
 
     const balance = parseWithFallback({
       text: 'what is my remaining money',
@@ -88,5 +96,30 @@ describe('fallback parser', () => {
       currency: 'ETB',
     });
     expect(balance.intent).toBe('QUERY_BALANCE');
+
+    expect(parseWithFallback({ text: 'ምን ያህል ቀርቷል', language: 'am', currency: 'ETB' }).intent).toBe(
+      'QUERY_BALANCE',
+    );
+  });
+
+  it('parses debt payments, budgets, and savings goals', () => {
+    const payment = parseWithFallback({ text: 'Abebe paid 500', language: 'en', currency: 'ETB' });
+    expect(payment.intent).toBe('RECORD_DEBT_PAYMENT');
+    expect(payment.personName).toBe('Abebe');
+    expect(payment.amount).toBe('500');
+
+    const budget = parseWithFallback({ text: 'budget 5000 food', language: 'en', currency: 'ETB' });
+    expect(budget.intent).toBe('CREATE_BUDGET');
+    expect(budget.amount).toBe('5000');
+    expect(budget.categorySlug).toBe('food');
+
+    const savings = parseWithFallback({
+      text: 'save 10000 for phone',
+      language: 'en',
+      currency: 'ETB',
+    });
+    expect(savings.intent).toBe('CREATE_SAVINGS_GOAL');
+    expect(savings.amount).toBe('10000');
+    expect(savings.description).toBe('phone');
   });
 });

@@ -14,6 +14,7 @@ export const structuredCommandSchema = z.object({
     'QUERY_DEBT',
     'QUERY_REPORT',
     'GREET',
+    'WELLBEING',
     'THANKS',
     'UNKNOWN',
   ]),

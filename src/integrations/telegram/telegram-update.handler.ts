@@ -1,8 +1,11 @@
 import { randomBytes } from 'node:crypto';
 import type { AiParseService } from '@/modules/ai/ai-parse.service';
+import type { BudgetService } from '@/modules/budgets/budget.service';
+import type { CategoryService } from '@/modules/categories/category.service';
 import type { DebtService } from '@/modules/debts/debt.service';
 import type { ReminderService } from '@/modules/reminders/reminder.service';
 import type { ReportService } from '@/modules/reports/report.service';
+import type { SavingsService } from '@/modules/savings/savings.service';
 import type { TransactionService } from '@/modules/transactions/transaction.service';
 import type { AuthenticatedUser } from '@/modules/users/user.types';
 import type { UserService } from '@/modules/users/user.service';
@@ -17,11 +20,14 @@ import {
   formatBalanceMessage,
   formatDashboardMessage,
   formatDebtsMessage,
+  formatSpendingMessage,
   helpKeyboard,
   htmlConfirmText,
   parseSlashCommand,
   startKeyboard,
 } from '@/integrations/telegram/telegram-ui';
+import { buildHelpfulNudge } from '@/integrations/telegram/nudge-message';
+import { AppError, ERROR_CODE } from '@/shared/errors/app-error';
 import { t } from '@/shared/i18n';
 import { logger } from '@/shared/logger/logger';
 import { formatMoney } from '@/shared/utils/money';
@@ -34,6 +40,9 @@ export class TelegramUpdateHandler {
     private readonly debts: DebtService,
     private readonly reminders: ReminderService,
     private readonly reports: ReportService,
+    private readonly budgets: BudgetService,
+    private readonly savings: SavingsService,
+    private readonly categories: CategoryService,
     private readonly conversations: ConversationStore,
     private readonly telegram: TelegramBotAdapter,
     private readonly feedback: FeedbackService,
@@ -107,12 +116,17 @@ export class TelegramUpdateHandler {
         await this.handleFeedback(chatId, user, args);
         return;
       default:
-        await this.telegram.sendMessage({
-          chatId,
-          text: t(user.language, 'unrecognized'),
-          parseMode: 'HTML',
-        });
+        await this.sendNudge(chatId, user);
     }
+  }
+
+  private async sendNudge(chatId: number, user: AuthenticatedUser, text = ''): Promise<void> {
+    await this.telegram.sendMessage({
+      chatId,
+      text: buildHelpfulNudge(user.language, text),
+      parseMode: 'HTML',
+      replyMarkup: startKeyboard(user.language),
+    });
   }
 
   private async handleNaturalLanguage(
@@ -129,10 +143,11 @@ export class TelegramUpdateHandler {
     if (parsed.quotaExceeded) {
       await this.telegram.sendMessage({
         chatId,
-        text: t(user.language, 'aiQuotaExceeded', {
+        text: `${t(user.language, 'aiQuotaExceeded', {
           limit: parsed.usage.limit,
-        }),
+        })}\n\n${buildHelpfulNudge(user.language, text, true)}`,
         parseMode: 'HTML',
+        replyMarkup: startKeyboard(user.language),
       });
       return;
     }
@@ -140,16 +155,22 @@ export class TelegramUpdateHandler {
     const command = parsed.command;
 
     if (command.intent === 'UNKNOWN') {
-      await this.telegram.sendMessage({
-        chatId,
-        text: t(user.language, 'unrecognized'),
-        parseMode: 'HTML',
-      });
+      await this.sendNudge(chatId, user, text);
       return;
     }
 
     if (command.intent === 'GREET') {
       await this.sendGreeting(chatId, user);
+      return;
+    }
+
+    if (command.intent === 'WELLBEING') {
+      await this.telegram.sendMessage({
+        chatId,
+        text: t(user.language, 'wellbeingReply'),
+        parseMode: 'HTML',
+        replyMarkup: startKeyboard(user.language),
+      });
       return;
     }
 
@@ -168,16 +189,28 @@ export class TelegramUpdateHandler {
       return;
     }
 
-    if (command.missingFields.includes('categorySlug')) {
+    const missingReply = this.missingFieldReply(user, command);
+    if (missingReply) {
       await this.telegram.sendMessage({
         chatId,
-        text: t(user.language, 'askCategory', {
-          amount: command.amount ?? '',
-          currency: user.currency,
-        }),
+        text: missingReply,
         parseMode: 'HTML',
       });
       return;
+    }
+
+    if (command.intent === 'RECORD_DEBT_PAYMENT') {
+      const debt = await this.findOpenDebt(user.id, command.personName ?? '');
+      if (!debt) {
+        await this.telegram.sendMessage({
+          chatId,
+          text: t(user.language, 'debtNotFound', {
+            person: escapeHtml(command.personName ?? ''),
+          }),
+          parseMode: 'HTML',
+        });
+        return;
+      }
     }
 
     const token = randomBytes(6).toString('hex');
@@ -193,6 +226,28 @@ export class TelegramUpdateHandler {
       parseMode: 'HTML',
       replyMarkup: confirmKeyboard(user.language, token),
     });
+  }
+
+  private missingFieldReply(user: AuthenticatedUser, command: StructuredCommand): string | null {
+    if (command.missingFields.includes('amount')) {
+      return t(user.language, 'askAmount');
+    }
+    if (command.missingFields.includes('personName')) {
+      return t(user.language, 'askPerson');
+    }
+    if (command.missingFields.includes('categorySlug')) {
+      return t(user.language, 'askCategory', {
+        amount: command.amount ?? '',
+        currency: user.currency,
+      });
+    }
+    if (command.missingFields.includes('description')) {
+      return t(user.language, 'askGoalName');
+    }
+    if (command.missingFields.includes('date')) {
+      return t(user.language, 'askDate');
+    }
+    return null;
   }
 
   private async sendGreeting(chatId: number, user: AuthenticatedUser): Promise<void> {
@@ -316,17 +371,21 @@ export class TelegramUpdateHandler {
       });
     } catch (error) {
       logger.error({ err: error, userId: user.id }, 'Failed to commit Telegram command');
+      const message =
+        error instanceof AppError && error.code === ERROR_CODE.SUBSCRIPTION_REQUIRED
+          ? t(user.language, 'planLimitReached')
+          : t(user.language, 'internalError');
       await this.telegram.answerCallbackQuery(callback.id, t(user.language, 'callbackError'));
       await this.telegram.sendMessage({
         chatId: callback.message.chat.id,
-        text: t(user.language, 'internalError'),
+        text: message,
         parseMode: 'HTML',
       });
     }
   }
 
   private async commit(user: AuthenticatedUser, command: StructuredCommand): Promise<string> {
-    const idempotencyKey = `telegram:${command.intent}:${command.amount}:${command.categorySlug}:${command.personName}:${command.date}:${command.reminderTitle}`;
+    const idempotencyKey = `telegram:${command.intent}:${command.amount}:${command.categorySlug}:${command.personName}:${command.date}:${command.reminderTitle}:${command.description}`;
 
     if (command.intent === 'CREATE_EXPENSE' || command.intent === 'CREATE_INCOME') {
       const saved = await this.transactions.create(user.id, user.currency, user.timezone, {
@@ -362,6 +421,55 @@ export class TelegramUpdateHandler {
       });
     }
 
+    if (command.intent === 'RECORD_DEBT_PAYMENT') {
+      const debt = await this.findOpenDebt(user.id, command.personName ?? '');
+      if (!debt) {
+        return t(user.language, 'debtNotFound', {
+          person: escapeHtml(command.personName ?? ''),
+        });
+      }
+
+      const result = await this.debts.recordPayment(user.id, debt.id, {
+        amount: command.amount ?? '0',
+      });
+      return t(user.language, 'recordedDebtPayment', {
+        person: escapeHtml(result.debt.personName),
+        amount: escapeHtml(result.payment.amount),
+        currency: escapeHtml(result.payment.currency),
+      });
+    }
+
+    if (command.intent === 'CREATE_BUDGET') {
+      const category = await this.categories.resolve(
+        user.id,
+        { categorySlug: command.categorySlug },
+        'EXPENSE',
+      );
+      const saved = await this.budgets.create(user.id, user.timezone, {
+        categoryId: category.id,
+        amount: command.amount ?? '0',
+        currency: user.currency,
+      });
+      return t(user.language, 'recordedBudget', {
+        category: escapeHtml(saved.categoryName),
+        amount: escapeHtml(saved.amount),
+        currency: escapeHtml(saved.currency),
+      });
+    }
+
+    if (command.intent === 'CREATE_SAVINGS_GOAL') {
+      const saved = await this.savings.create(user.id, {
+        name: command.description ?? 'Goal',
+        targetAmount: command.amount ?? '0',
+        currency: user.currency,
+      });
+      return t(user.language, 'recordedSavingsGoal', {
+        goal: escapeHtml(saved.name),
+        amount: escapeHtml(saved.targetAmount),
+        currency: escapeHtml(saved.currency),
+      });
+    }
+
     if (command.intent === 'CREATE_REMINDER') {
       await this.reminders.create(user.id, user.timezone, {
         title: command.reminderTitle ?? 'Reminder',
@@ -370,7 +478,7 @@ export class TelegramUpdateHandler {
       return t(user.language, 'recordedReminder');
     }
 
-    return t(user.language, 'unrecognized');
+    return buildHelpfulNudge(user.language);
   }
 
   private async handleQuery(chatId: number, user: AuthenticatedUser, command: StructuredCommand): Promise<void> {
@@ -388,6 +496,17 @@ export class TelegramUpdateHandler {
     }
 
     const dashboard = await this.reports.dashboard(user.id, user.timezone);
+
+    if (command.intent === 'QUERY_SPENDING') {
+      await this.telegram.sendMessage({
+        chatId,
+        text: formatSpendingMessage(user, dashboard, command.categorySlug),
+        parseMode: 'HTML',
+        replyMarkup: helpKeyboard(user.language),
+      });
+      return;
+    }
+
     const text =
       command.intent === 'QUERY_BALANCE'
         ? formatBalanceMessage(user, dashboard)
@@ -399,6 +518,19 @@ export class TelegramUpdateHandler {
       parseMode: 'HTML',
       replyMarkup: helpKeyboard(user.language),
     });
+  }
+
+  private async findOpenDebt(userId: string, personName: string) {
+    const needle = personName.trim().toLowerCase();
+    if (!needle) return null;
+
+    const debts = await this.debts.list(userId);
+    return (
+      debts.find(
+        (debt) =>
+          debt.status !== 'SETTLED' && debt.personName.trim().toLowerCase() === needle,
+      ) ?? null
+    );
   }
 
   private confirmText(user: AuthenticatedUser, command: StructuredCommand): string {
@@ -420,6 +552,27 @@ export class TelegramUpdateHandler {
     if (command.intent === 'CREATE_DEBT') {
       return htmlConfirmText(user, 'confirmDebt', {
         person: command.personName ?? '',
+        amount,
+        currency: user.currency,
+      });
+    }
+    if (command.intent === 'RECORD_DEBT_PAYMENT') {
+      return htmlConfirmText(user, 'confirmDebtPayment', {
+        person: command.personName ?? '',
+        amount,
+        currency: user.currency,
+      });
+    }
+    if (command.intent === 'CREATE_BUDGET') {
+      return htmlConfirmText(user, 'confirmBudget', {
+        category: command.categorySlug ?? '',
+        amount,
+        currency: user.currency,
+      });
+    }
+    if (command.intent === 'CREATE_SAVINGS_GOAL') {
+      return htmlConfirmText(user, 'confirmSavingsGoal', {
+        goal: command.description ?? '',
         amount,
         currency: user.currency,
       });

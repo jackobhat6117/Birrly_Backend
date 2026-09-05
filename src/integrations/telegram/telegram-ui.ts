@@ -45,6 +45,35 @@ export function formatDashboardMessage(
   });
 }
 
+export function formatSpendingMessage(
+  user: AuthenticatedUser,
+  dashboard: DashboardNumbers & { topCategories: Array<{ name: string; amount: string }> },
+  categorySlug?: string,
+): string {
+  let lines: string[];
+  if (categorySlug) {
+    const needle = categorySlug.toLowerCase();
+    const hit = dashboard.topCategories.find(
+      (row) => row.name.toLowerCase().includes(needle) || needle.includes(row.name.toLowerCase()),
+    );
+    lines = hit
+      ? [`• ${escapeHtml(hit.name)}: <code>${escapeHtml(hit.amount)} ${escapeHtml(user.currency)}</code>`]
+      : [`• ${escapeHtml(categorySlug)}: <code>0 ${escapeHtml(user.currency)}</code>`];
+  } else if (dashboard.topCategories.length > 0) {
+    lines = dashboard.topCategories.map(
+      (row) => `• ${escapeHtml(row.name)}: <code>${escapeHtml(row.amount)} ${escapeHtml(user.currency)}</code>`,
+    );
+  } else {
+    lines = [`• <code>0 ${escapeHtml(user.currency)}</code>`];
+  }
+
+  return t(user.language, 'spendingMessage', {
+    lines: lines.join('\n'),
+    total: escapeHtml(dashboard.expenses),
+    currency: escapeHtml(user.currency),
+  });
+}
+
 export function formatDebtsMessage(
   user: AuthenticatedUser,
   lines: string[],

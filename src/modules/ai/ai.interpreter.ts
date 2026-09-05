@@ -14,7 +14,16 @@ export class AiInterpreter {
     if (useLlm && this.llmProvider.isEnabled()) {
       try {
         const parsed = await this.llmProvider.parse(input);
-        return structuredCommandSchema.parse(parsed);
+        const validated = structuredCommandSchema.parse(parsed);
+        if (validated.intent !== 'UNKNOWN') {
+          return validated;
+        }
+        const fallback = parseWithFallback(input);
+        const fallbackValidated = structuredCommandSchema.parse(fallback);
+        if (fallbackValidated.intent !== 'UNKNOWN') {
+          return fallbackValidated;
+        }
+        return validated;
       } catch {
         const fallback = parseWithFallback(input);
         return structuredCommandSchema.parse(fallback);

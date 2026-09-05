@@ -40,9 +40,35 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
   const text = input.text.trim();
   const lower = text.toLowerCase();
 
+  const debtPaidByPerson = text.match(
+    new RegExp(`^(.+?)\\s+(?:paid|pay(?:ed)?|repaid)\\s+${AMOUNT}\\s*${CURRENCY}\\s*$`, 'i'),
+  );
+  if (debtPaidByPerson?.[1] && debtPaidByPerson[2]) {
+    return command({
+      intent: 'RECORD_DEBT_PAYMENT',
+      personName: debtPaidByPerson[1].trim(),
+      amount: normalizeAmount(debtPaidByPerson[2]),
+      currency: input.currency,
+      confidence: 0.84,
+    });
+  }
+
+  const debtPaidToPerson = text.match(
+    new RegExp(`^(?:paid|pay)\\s+(.+?)\\s+${AMOUNT}\\s*${CURRENCY}\\s*$`, 'i'),
+  );
+  if (debtPaidToPerson?.[1] && debtPaidToPerson[2]) {
+    return command({
+      intent: 'RECORD_DEBT_PAYMENT',
+      personName: debtPaidToPerson[1].trim(),
+      amount: normalizeAmount(debtPaidToPerson[2]),
+      currency: input.currency,
+      confidence: 0.84,
+    });
+  }
+
   const spent = text.match(
     new RegExp(
-      `(?:i\\s+)?(?:spent|paid|pay)\\s+${AMOUNT}\\s*${CURRENCY}\\s*(?:on\\s+|for\\s+)?(.*)?`,
+      `^(?:i\\s+)?(?:spent|paid)\\s+${AMOUNT}\\s*${CURRENCY}\\s*(?:on\\s+|for\\s+)?(.*)?$`,
       'i',
     ),
   );
@@ -138,20 +164,35 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
     return command({ intent: 'GREET', confidence: 0.95 });
   }
 
+  if (
+    /^(?:how are you|how r u|how are u|how'?s it going|what'?s up|whats up|sup|how do you do|you good|how you doing)(?:\s+birrly)?[!?.\s]*$/i.test(
+      text,
+    ) ||
+    /^(?:እንዴት\s*(?:ነህ|ነሽ|ናችሁ|ነው))[!?.\s]*$/i.test(text)
+  ) {
+    return command({ intent: 'WELLBEING', confidence: 0.93 });
+  }
+
   if (/^(?:thanks|thank you|thx|አመሰግናለሁ)(?:\s+birrly)?[!?.\s]*$/i.test(text)) {
     return command({ intent: 'THANKS', confidence: 0.92 });
   }
 
   if (
     /what(?:'s| is) my remaining/.test(lower) ||
-    /how much (?:money |cash )?(?:do i )?have left/.test(lower) ||
+    /how much (?:money |cash )?(?:do i )?(?:have |is )?left/.test(lower) ||
+    /how much (?:money|cash) is left/.test(lower) ||
+    /how much is left/.test(lower) ||
+    /what(?:'s| is) (?:my )?(?:money |cash )?left/.test(lower) ||
     /what(?:'s| is) left(?: until payday)?/.test(lower) ||
     /remaining (?:money|cash|balance)/.test(lower) ||
-    /(?:money|cash) left/.test(lower) ||
+    /(?:money|cash) (?:is )?left/.test(lower) ||
     /left until payday/.test(lower) ||
     /(?:my|what(?:'s| is) my) balance/.test(lower) ||
     /how much remaining/.test(lower) ||
-    /how much do i have/.test(lower)
+    /how much do i have/.test(lower) ||
+    /ምን ያህል ቀር/.test(text) ||
+    /የቀረ(?:ው)?\s*(?:ገንዘብ|ብር)/.test(text) ||
+    /ቀሪ\s*(?:ብር|ገንዘብ)/.test(text)
   ) {
     return command({ intent: 'QUERY_BALANCE', confidence: 0.88 });
   }
@@ -168,7 +209,7 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
     });
   }
 
-  if (/report|summary|this month/.test(lower)) {
+  if (/report|summary|this month|ማጠቃለያ|የዚህ ወር/.test(lower) || /የዚህ ወር/.test(text)) {
     return command({
       intent: 'QUERY_REPORT',
       confidence: 0.7,
@@ -176,12 +217,69 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
   }
 
   if (
-    /debt|owe|owes|ዕዳ/.test(lower) &&
-    !new RegExp(AMOUNT).test(text)
+    /(?:show|list|my)\s+debts?|who owes|debt|owe|owes|ዕዳ|ማን ይከፍ/.test(lower) &&
+    !new RegExp(AMOUNT).test(text) &&
+    !/(?:paid|pay)\s/.test(lower)
   ) {
     return command({
       intent: 'QUERY_DEBT',
       confidence: 0.6,
+    });
+  }
+
+  const budgetLead = text.match(
+    new RegExp(`^(?:budget|limit)\\s+${AMOUNT}\\s*${CURRENCY}\\s+(?:for\\s+)?(.+)$`, 'i'),
+  );
+  if (budgetLead?.[1]) {
+    const categorySlug = resolveCategory(budgetLead[2]?.trim());
+    return command({
+      intent: 'CREATE_BUDGET',
+      amount: normalizeAmount(budgetLead[1]),
+      currency: input.currency,
+      categorySlug,
+      confidence: categorySlug ? 0.82 : 0.55,
+      missingFields: categorySlug ? [] : ['categorySlug'],
+    });
+  }
+
+  const budgetTrail = text.match(
+    new RegExp(`^(.+?)\\s+budget\\s+(?:of\\s+|to\\s+)?${AMOUNT}\\s*${CURRENCY}\\s*$`, 'i'),
+  );
+  if (budgetTrail?.[1] && budgetTrail[2]) {
+    const categorySlug = resolveCategory(budgetTrail[1].trim());
+    return command({
+      intent: 'CREATE_BUDGET',
+      amount: normalizeAmount(budgetTrail[2]),
+      currency: input.currency,
+      categorySlug,
+      confidence: categorySlug ? 0.82 : 0.55,
+      missingFields: categorySlug ? [] : ['categorySlug'],
+    });
+  }
+
+  const savingsLead = text.match(
+    new RegExp(`^(?:save|savings?\\s+goal?)\\s+${AMOUNT}\\s*${CURRENCY}\\s+(?:for\\s+)?(.+)$`, 'i'),
+  );
+  if (savingsLead?.[1] && savingsLead[2]) {
+    return command({
+      intent: 'CREATE_SAVINGS_GOAL',
+      amount: normalizeAmount(savingsLead[1]),
+      currency: input.currency,
+      description: savingsLead[2].trim(),
+      confidence: 0.8,
+    });
+  }
+
+  const savingsTrail = text.match(
+    new RegExp(`^(.+?)\\s+(?:save|savings?)\\s+${AMOUNT}\\s*${CURRENCY}\\s*$`, 'i'),
+  );
+  if (savingsTrail?.[1] && savingsTrail[2]) {
+    return command({
+      intent: 'CREATE_SAVINGS_GOAL',
+      amount: normalizeAmount(savingsTrail[2]),
+      currency: input.currency,
+      description: savingsTrail[1].trim(),
+      confidence: 0.8,
     });
   }
 
