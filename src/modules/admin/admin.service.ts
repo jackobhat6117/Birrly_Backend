@@ -77,7 +77,12 @@ export class AdminService {
       this.db.user.count({ where: { lastSeenAt: { gte: startOfToday } } }),
       this.db.user.count({ where: { lastSeenAt: { gte: sevenDaysAgo } } }),
       this.db.subscription.count({
-        where: { status: 'ACTIVE', plan: { not: 'FREE' } },
+        where: {
+          status: 'ACTIVE',
+          plan: { not: 'FREE' },
+          // Exclude lapsed periods so the count matches `getAccess`/effectivePlan.
+          OR: [{ currentPeriodEnd: null }, { currentPeriodEnd: { gt: now.toJSDate() } }],
+        },
       }),
       this.db.auditLog.count({
         where: { action: 'TRANSACTION_CREATED', createdAt: { gte: sevenDaysAgo } },
@@ -246,7 +251,11 @@ export class AdminService {
         lastName: user.lastName,
         telegramUsername: user.telegramUsername,
         language: user.language,
-        plan: effectivePlan(user.subscription?.plan, user.subscription?.status),
+        plan: effectivePlan(
+          user.subscription?.plan,
+          user.subscription?.status,
+          user.subscription?.currentPeriodEnd,
+        ),
         subscriptionSource: user.subscription?.source ?? null,
         currentPeriodEnd: user.subscription?.currentPeriodEnd?.toISOString() ?? null,
         createdAt: user.createdAt.toISOString(),

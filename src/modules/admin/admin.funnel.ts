@@ -15,7 +15,14 @@ export function funnelSteps(
   }));
 }
 
-export function effectivePlan(plan: string | null | undefined, status: string | null | undefined): string {
+export function effectivePlan(
+  plan: string | null | undefined,
+  status: string | null | undefined,
+  currentPeriodEnd?: Date | null,
+): string {
   if (!plan || status !== 'ACTIVE') return 'FREE';
+  // A period that has elapsed means the subscription lapsed, even if the stored
+  // status is still ACTIVE (expiry is computed on read, not persisted).
+  if (currentPeriodEnd && currentPeriodEnd.getTime() <= Date.now()) return 'FREE';
   return plan;
 }
