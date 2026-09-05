@@ -10,7 +10,6 @@ import type {
   SubscriptionAccess,
   SubscriptionPlan,
   SubscriptionSource,
-  SubscriptionStatus,
   UpgradeRequestDto,
   UpgradeRequestStatus,
 } from './subscription.types';

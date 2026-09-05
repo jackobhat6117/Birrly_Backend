@@ -49,7 +49,7 @@ export class AdminController {
   grantSubscription = asyncHandler(async (req: Request, res: Response) => {
     const params = adminUserIdSchema.parse(req.params);
     const body = adminGrantSubscriptionSchema.parse(req.body);
-    const adminId = (req as any).admin?.sub;
+    const adminId = req.admin?.sub;
     const result = await this.admin.grantSubscription(params.id, body, adminId);
     res.json({ data: result });
   });
@@ -57,7 +57,7 @@ export class AdminController {
   revokeSubscription = asyncHandler(async (req: Request, res: Response) => {
     const params = adminUserIdSchema.parse(req.params);
     const body = adminRevokeSubscriptionSchema.parse(req.body);
-    const adminId = (req as any).admin?.sub;
+    const adminId = req.admin?.sub;
     const result = await this.admin.revokeSubscription(params.id, body, adminId);
     res.json({ data: result });
   });
@@ -71,7 +71,7 @@ export class AdminController {
   approveUpgradeRequest = asyncHandler(async (req: Request, res: Response) => {
     const params = upgradeRequestIdSchema.parse(req.params);
     const body = adminReviewUpgradeRequestSchema.parse(req.body);
-    const adminId = (req as any).admin?.sub;
+    const adminId = req.admin?.sub;
     const result = await this.admin.reviewUpgradeRequest(params.id, 'APPROVED', body.note, adminId);
     res.json({ data: result });
   });
@@ -79,7 +79,7 @@ export class AdminController {
   rejectUpgradeRequest = asyncHandler(async (req: Request, res: Response) => {
     const params = upgradeRequestIdSchema.parse(req.params);
     const body = adminReviewUpgradeRequestSchema.parse(req.body);
-    const adminId = (req as any).admin?.sub;
+    const adminId = req.admin?.sub;
     const result = await this.admin.reviewUpgradeRequest(params.id, 'REJECTED', body.note, adminId);
     res.json({ data: result });
   });
