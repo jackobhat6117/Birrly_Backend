@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { AppError, ConflictError, ERROR_CODE } from '@/shared/errors/app-error';
 import type { AuditService } from '@/modules/audit/audit.service';
 import type { CategoryRepository } from '@/modules/categories/category.repository';
+import { FALLBACK_CATEGORY_SLUG } from '@/shared/constants/categories';
 import { slugifyCategory } from '@/shared/utils/slug';
 
 export class CategoryService {
@@ -66,6 +67,12 @@ export class CategoryService {
       return category;
     }
 
-    throw new AppError(ERROR_CODE.INVALID_CATEGORY, 'Category is required.', 400);
+    // No category supplied: fall back to the system "Other" bucket for this type
+    // rather than rejecting. Capturing the amount matters more than classifying it.
+    const fallback = await this.categories.findBySlug(FALLBACK_CATEGORY_SLUG[type], userId, type);
+    if (!fallback) {
+      throw new AppError(ERROR_CODE.INVALID_CATEGORY, 'Category is required.', 400);
+    }
+    return fallback;
   }
 }

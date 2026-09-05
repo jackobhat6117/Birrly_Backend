@@ -15,6 +15,16 @@ export const SYSTEM_CATEGORIES = [
   { slug: 'other-income', name: 'Other', kind: 'INCOME' as const },
 ] as const;
 
+/**
+ * Used when a transaction arrives without a category — the Mini App quick-save
+ * and any parser result that could not infer one. Logging must never be blocked
+ * on picking a category; it can always be corrected later.
+ */
+export const FALLBACK_CATEGORY_SLUG = {
+  EXPENSE: 'other-expense',
+  INCOME: 'other-income',
+} as const;
+
 export const DEFAULT_ACCOUNTS = [
   { name: 'Cash', type: 'CASH' as const, isDefault: true },
   { name: 'Bank', type: 'BANK' as const, isDefault: false },
