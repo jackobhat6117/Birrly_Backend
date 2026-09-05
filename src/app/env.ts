@@ -41,6 +41,10 @@ const envSchema = z.object({
   ADMIN_JWT_EXPIRES_SEC: z.coerce.number().int().positive().default(86_400),
   ADMIN_BOOTSTRAP_EMAIL: z.string().default(''),
   ADMIN_BOOTSTRAP_PASSWORD: z.string().default(''),
+  TELEBIRR_PHONE: z.string().default('+251 91 100 0000'),
+  TELEBIRR_ACCOUNT_NAME: z.string().default('Birrly'),
+  SUBSCRIPTION_MONTHLY_PRICE_ETB: z.string().default('200.00'),
+  SUBSCRIPTION_YEARLY_PRICE_ETB: z.string().default('2000.00'),
 });
 
 const parsed = envSchema.safeParse(process.env);

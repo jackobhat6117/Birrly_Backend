@@ -94,6 +94,24 @@ enum SubscriptionStatus {
   @@map("subscription_status")
 }
 
+enum SubscriptionSource {
+  SIGNUP_TRIAL
+  TELEBIRR
+  PROMO
+  ADMIN
+
+  @@map("subscription_source")
+}
+
+enum UpgradeRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+
+  @@map("upgrade_request_status")
+}
+
 enum NotificationChannel {
   TELEGRAM
 
@@ -143,6 +161,7 @@ model User {
   reminders              Reminder[]
   recurringTransactions  RecurringTransaction[]
   subscription           Subscription?
+  subscriptionUpgradeRequests SubscriptionUpgradeRequest[]
   payments               Payment[]
   notifications          Notification[]
   aiInteractions         AiInteraction[]
@@ -353,6 +372,7 @@ model Subscription {
   userId           String             @unique @map("user_id")
   plan             SubscriptionPlan   @default(FREE) @map("plan")
   status           SubscriptionStatus @default(ACTIVE) @map("status")
+  source           SubscriptionSource? @map("source")
   currentPeriodEnd DateTime?          @map("current_period_end")
   createdAt        DateTime           @default(now()) @map("created_at")
   updatedAt        DateTime           @updatedAt @map("updated_at")
@@ -360,6 +380,41 @@ model Subscription {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
+}
+
+model SubscriptionUpgradeRequest {
+  id            String               @id @default(uuid()) @map("id")
+  userId        String               @map("user_id")
+  referenceCode String               @unique @map("reference_code")
+  plan          SubscriptionPlan     @map("plan")
+  amount        Decimal              @map("amount") @db.Decimal(19, 4)
+  currency      String               @default("ETB") @map("currency")
+  status        UpgradeRequestStatus @default(PENDING) @map("status")
+  adminNote     String?              @map("admin_note")
+  reviewedAt    DateTime?            @map("reviewed_at")
+  createdAt     DateTime             @default(now()) @map("created_at")
+  updatedAt     DateTime             @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("subscription_upgrade_requests")
+}
+
+model PromoCode {
+  id           String           @id @default(uuid()) @map("id")
+  code         String           @unique @map("code")
+  plan         SubscriptionPlan @map("plan")
+  durationDays Int              @map("duration_days")
+  maxUses      Int              @default(100) @map("max_uses")
+  usedCount    Int              @default(0) @map("used_count")
+  expiresAt    DateTime?        @map("expires_at")
+  active       Boolean          @default(true) @map("active")
+  note         String?          @map("note")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  @@map("promo_codes")
 }
 
 model Payment {

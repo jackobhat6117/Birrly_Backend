@@ -9,6 +9,7 @@ import { reminderRoutes } from '@/modules/reminders/reminder.routes';
 import { reportRoutes } from '@/modules/reports/report.routes';
 import { budgetRoutes } from '@/modules/budgets/budget.routes';
 import { savingsRoutes } from '@/modules/savings/savings.routes';
+import { subscriptionRoutes } from '@/modules/subscriptions/subscription.routes';
 import { transactionRoutes } from '@/modules/transactions/transaction.routes';
 import { userRoutes } from '@/modules/users/user.routes';
 import { analyticsRoutes } from '@/modules/analytics/analytics.routes';
@@ -23,6 +24,7 @@ export function createRoutes(container: AppContainer): Router {
   router.use(auth);
 
   router.use('/users', userRoutes(container.userController));
+  router.use('/subscriptions', subscriptionRoutes(container.subscriptionController));
   router.use('/accounts', accountRoutes(container.accountController));
   router.use('/categories', categoryRoutes(container.categoryController));
   router.use('/transactions', transactionRoutes(container.transactionController));

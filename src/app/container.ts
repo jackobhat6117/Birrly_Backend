@@ -34,6 +34,7 @@ import { BudgetService } from '@/modules/budgets/budget.service';
 import { SavingsController } from '@/modules/savings/savings.controller';
 import { SavingsRepository } from '@/modules/savings/savings.repository';
 import { SavingsService } from '@/modules/savings/savings.service';
+import { SubscriptionController } from '@/modules/subscriptions/subscription.controller';
 import { SubscriptionService } from '@/modules/subscriptions/subscription.service';
 import { TransactionController } from '@/modules/transactions/transaction.controller';
 import { TransactionRepository } from '@/modules/transactions/transaction.repository';
@@ -63,7 +64,7 @@ export function createContainer() {
   const feedbackRepository = new FeedbackRepository(prisma);
 
   const auditService = new AuditService(prisma);
-  const subscriptionService = new SubscriptionService(prisma);
+  const subscriptionService = new SubscriptionService(prisma, config.subscription);
   const userService = new UserService(prisma, userRepository, auditService);
   const accountService = new AccountService(accountRepository);
   const categoryService = new CategoryService(categoryRepository, auditService);
@@ -95,7 +96,7 @@ export function createContainer() {
   );
   const savingsService = new SavingsService(savingsRepository, subscriptionService, auditService);
   const analyticsService = new AnalyticsService(prisma);
-  const adminService = new AdminService(prisma, feedbackRepository);
+  const adminService = new AdminService(prisma, feedbackRepository, subscriptionService);
   const feedbackService = new FeedbackService(feedbackRepository);
   const llmProvider = createLlmProvider(config.llm);
   const interpreter = new AiInterpreter(llmProvider);
@@ -139,6 +140,7 @@ export function createContainer() {
     adminService,
     feedbackService,
     userController: new UserController(userService, subscriptionService),
+    subscriptionController: new SubscriptionController(subscriptionService),
     accountController: new AccountController(accountService),
     categoryController: new CategoryController(categoryService),
     transactionController: new TransactionController(transactionService),

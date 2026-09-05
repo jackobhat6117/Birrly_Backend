@@ -27,6 +27,9 @@ export class UserController {
       ...user,
       plan: access.effectivePlan,
       entitlements: access.entitlements,
+      isTrial: access.isTrial,
+      daysRemaining: access.daysRemaining,
+      currentPeriodEnd: access.currentPeriodEnd,
     };
   }
 }

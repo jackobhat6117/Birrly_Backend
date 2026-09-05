@@ -39,4 +39,10 @@ export const config = {
     /** Free-plan LLM parses per user per UTC day. Premium is unlimited. */
     dailyLimit: env.AI_RATE_LIMIT_MAX,
   },
+  subscription: {
+    telebirrPhone: env.TELEBIRR_PHONE.trim() || '+251 91 100 0000',
+    telebirrAccountName: env.TELEBIRR_ACCOUNT_NAME.trim() || 'Birrly',
+    monthlyPriceEtb: env.SUBSCRIPTION_MONTHLY_PRICE_ETB.trim() || '200.00',
+    yearlyPriceEtb: env.SUBSCRIPTION_YEARLY_PRICE_ETB.trim() || '2000.00',
+  },
 } as const;

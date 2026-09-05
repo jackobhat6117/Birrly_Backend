@@ -1,5 +1,4 @@
 import { DateTime } from 'luxon';
-import type { Prisma } from '@prisma/client';
 import { config } from '@/app/config';
 import type { DbClient } from '@/database/prisma';
 import { DEFAULT_TIMEZONE } from '@/shared/constants/app';
@@ -14,11 +13,14 @@ import {
 } from '@/modules/admin/admin.auth';
 import { effectivePlan, funnelSteps } from '@/modules/admin/admin.funnel';
 import type { FeedbackRepository } from '@/modules/feedback/feedback.repository';
+import type { SubscriptionService } from '@/modules/subscriptions/subscription.service';
+import type { SubscriptionPlan, UpgradeRequestStatus } from '@/modules/subscriptions/subscription.types';
 
 export class AdminService {
   constructor(
     private readonly db: DbClient,
     private readonly feedbackRepository: FeedbackRepository,
+    private readonly subscriptionService: SubscriptionService,
   ) {}
 
   async bootstrap(): Promise<void> {
@@ -68,6 +70,7 @@ export class AdminService {
       transactions7d,
       transactionsAll,
       aiRequests7d,
+      pendingUpgrades,
     ] = await Promise.all([
       this.db.user.count(),
       this.db.user.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
@@ -81,6 +84,7 @@ export class AdminService {
       }),
       this.db.auditLog.count({ where: { action: 'TRANSACTION_CREATED' } }),
       this.db.aiInteraction.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+      this.db.subscriptionUpgradeRequest.count({ where: { status: 'PENDING' } }),
     ]);
 
     return {
@@ -96,6 +100,9 @@ export class AdminService {
         transactions7d,
         transactionsAll,
         aiRequests7d,
+      },
+      upgrades: {
+        pending: pendingUpgrades,
       },
     };
   }
@@ -164,7 +171,7 @@ export class AdminService {
           by: ['userId'],
           where: { name: 'SCREEN_VIEW', screen: 'subscription' },
         })
-        .then((rows) => rows.length),
+        .then((rows: Array<{ userId: string }>) => rows.length),
     ]);
 
     return {
@@ -183,12 +190,12 @@ export class AdminService {
   async listUsers(query: { q?: string; page?: number; pageSize?: number }) {
     const { skip, take, page, pageSize } = normalizePagination(query);
     const search = query.q?.trim();
-    const where: Prisma.UserWhereInput = search
+    const where = search
       ? {
           OR: [
-            { firstName: { contains: search, mode: 'insensitive' } },
-            { lastName: { contains: search, mode: 'insensitive' } },
-            { telegramUsername: { contains: search, mode: 'insensitive' } },
+            { firstName: { contains: search, mode: 'insensitive' as const } },
+            { lastName: { contains: search, mode: 'insensitive' as const } },
+            { telegramUsername: { contains: search, mode: 'insensitive' as const } },
           ],
         }
       : {};
@@ -210,24 +217,44 @@ export class AdminService {
           lastSeenAt: true,
           paydayDay: true,
           monthlyIncome: true,
-          subscription: { select: { plan: true, status: true } },
+          subscription: { select: { plan: true, status: true, source: true, currentPeriodEnd: true } },
         },
       }),
     ]);
 
     return {
-      data: rows.map((user) => ({
+      data: rows.map(
+        (user: {
+          id: string;
+          firstName: string | null;
+          lastName: string | null;
+          telegramUsername: string | null;
+          language: string;
+          createdAt: Date;
+          lastSeenAt: Date | null;
+          paydayDay: number | null;
+          monthlyIncome: unknown;
+          subscription: {
+            plan: string;
+            status: string;
+            source: string | null;
+            currentPeriodEnd: Date | null;
+          } | null;
+        }) => ({
         id: user.id,
         firstName: user.firstName,
         lastName: user.lastName,
         telegramUsername: user.telegramUsername,
         language: user.language,
         plan: effectivePlan(user.subscription?.plan, user.subscription?.status),
+        subscriptionSource: user.subscription?.source ?? null,
+        currentPeriodEnd: user.subscription?.currentPeriodEnd?.toISOString() ?? null,
         createdAt: user.createdAt.toISOString(),
         lastSeenAt: user.lastSeenAt?.toISOString() ?? null,
         hasPayday: user.paydayDay != null,
         hasIncome: user.monthlyIncome != null,
-      })),
+      }),
+      ),
       meta: paginationMeta(total, page, pageSize),
     };
   }
@@ -249,7 +276,16 @@ export class AdminService {
         lastSeenAt: true,
         paydayDay: true,
         monthlyIncome: true,
-        subscription: { select: { plan: true, status: true } },
+        subscription: {
+          select: {
+            plan: true,
+            status: true,
+            source: true,
+            currentPeriodEnd: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
       },
     });
 
@@ -257,7 +293,7 @@ export class AdminService {
       throw new NotFoundError(ERROR_CODE.USER_NOT_FOUND, 'User was not found.');
     }
 
-    const [events, actions] = await Promise.all([
+    const [events, actions, upgradeRequests, access] = await Promise.all([
       this.db.productEvent.findMany({
         where: { userId: id },
         orderBy: { createdAt: 'desc' },
@@ -268,8 +304,14 @@ export class AdminService {
         where: { userId: id },
         orderBy: { createdAt: 'desc' },
         take: 50,
-        select: { id: true, action: true, entityType: true, createdAt: true },
+        select: { id: true, action: true, entityType: true, createdAt: true, metadata: true },
       }),
+      this.db.subscriptionUpgradeRequest.findMany({
+        where: { userId: id },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      }),
+      this.subscriptionService.getAccess(id),
     ]);
 
     return {
@@ -278,24 +320,112 @@ export class AdminService {
       lastName: user.lastName,
       telegramUsername: user.telegramUsername,
       language: user.language,
-      plan: effectivePlan(user.subscription?.plan, user.subscription?.status),
+      plan: access.effectivePlan,
+      storedPlan: access.storedPlan,
+      subscriptionStatus: access.status,
+      subscriptionSource: access.source,
+      currentPeriodEnd: access.currentPeriodEnd,
+      isTrial: access.isTrial,
+      daysRemaining: access.daysRemaining,
       createdAt: user.createdAt.toISOString(),
       lastSeenAt: user.lastSeenAt?.toISOString() ?? null,
       hasPayday: user.paydayDay != null,
       hasIncome: user.monthlyIncome != null,
-      events: events.map((event) => ({
+      upgradeRequests: upgradeRequests.map(
+        (r: {
+          id: string;
+          referenceCode: string;
+          plan: string;
+          amount: { toFixed: (digits: number) => string };
+          currency: string;
+          status: string;
+          adminNote: string | null;
+          reviewedAt: Date | null;
+          createdAt: Date;
+        }) => ({
+        id: r.id,
+        referenceCode: r.referenceCode,
+        plan: r.plan,
+        amount: r.amount.toFixed(2),
+        currency: r.currency,
+        status: r.status,
+        adminNote: r.adminNote,
+        reviewedAt: r.reviewedAt?.toISOString() ?? null,
+        createdAt: r.createdAt.toISOString(),
+      }),
+      ),
+      events: events.map(
+        (event: { id: string; name: string; screen: string | null; createdAt: Date }) => ({
         id: event.id,
         name: event.name,
         screen: event.screen,
         createdAt: event.createdAt.toISOString(),
-      })),
-      actions: actions.map((action) => ({
+      }),
+      ),
+      actions: actions.map(
+        (action: {
+          id: string;
+          action: string;
+          entityType: string;
+          createdAt: Date;
+          metadata: unknown;
+        }) => ({
         id: action.id,
         action: action.action,
         entityType: action.entityType,
         createdAt: action.createdAt.toISOString(),
-      })),
+        metadata: action.metadata,
+      }),
+      ),
     };
+  }
+
+  grantSubscription(
+    userId: string,
+    data: { plan: SubscriptionPlan; months?: number; note?: string },
+    adminId?: string,
+  ) {
+    return this.subscriptionService.grantSubscription(userId, {
+      ...data,
+      adminId,
+    });
+  }
+
+  revokeSubscription(userId: string, data?: { note?: string }, adminId?: string) {
+    return this.subscriptionService.revokeSubscription(userId, adminId, data?.note);
+  }
+
+  listUpgradeRequests(query: {
+    status?: UpgradeRequestStatus;
+    page?: number;
+    pageSize?: number;
+    userId?: string;
+  }) {
+    return this.subscriptionService.listUpgradeRequests(query);
+  }
+
+  reviewUpgradeRequest(
+    requestId: string,
+    status: 'APPROVED' | 'REJECTED',
+    note?: string,
+    adminId?: string,
+  ) {
+    return this.subscriptionService.reviewUpgradeRequest(requestId, status, note, adminId);
+  }
+
+  listPromoCodes() {
+    return this.subscriptionService.listPromoCodes();
+  }
+
+  createPromoCode(data: {
+    code: string;
+    plan?: SubscriptionPlan;
+    durationDays: number;
+    maxUses?: number;
+    expiresAt?: Date;
+    note?: string;
+  }) {
+    return this.subscriptionService.createPromoCode(data);
   }
 }
 
