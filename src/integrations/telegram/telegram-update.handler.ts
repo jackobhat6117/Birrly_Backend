@@ -14,6 +14,7 @@ import type { TelegramUpdate } from '@/integrations/telegram/telegram.types';
 import {
   confirmKeyboard,
   escapeHtml,
+  formatBalanceMessage,
   formatDashboardMessage,
   formatDebtsMessage,
   helpKeyboard,
@@ -147,6 +148,26 @@ export class TelegramUpdateHandler {
       return;
     }
 
+    if (command.intent === 'GREET') {
+      await this.sendGreeting(chatId, user);
+      return;
+    }
+
+    if (command.intent === 'THANKS') {
+      await this.telegram.sendMessage({
+        chatId,
+        text: t(user.language, 'thanksReply'),
+        parseMode: 'HTML',
+        replyMarkup: helpKeyboard(user.language),
+      });
+      return;
+    }
+
+    if (command.intent.startsWith('QUERY_')) {
+      await this.handleQuery(chatId, user, command);
+      return;
+    }
+
     if (command.missingFields.includes('categorySlug')) {
       await this.telegram.sendMessage({
         chatId,
@@ -156,11 +177,6 @@ export class TelegramUpdateHandler {
         }),
         parseMode: 'HTML',
       });
-      return;
-    }
-
-    if (command.intent.startsWith('QUERY_')) {
-      await this.handleQuery(chatId, user, command);
       return;
     }
 
@@ -176,6 +192,17 @@ export class TelegramUpdateHandler {
       text: this.confirmText(user, command),
       parseMode: 'HTML',
       replyMarkup: confirmKeyboard(user.language, token),
+    });
+  }
+
+  private async sendGreeting(chatId: number, user: AuthenticatedUser): Promise<void> {
+    await this.telegram.sendMessage({
+      chatId,
+      text: t(user.language, 'greetReply', {
+        name: escapeHtml(user.firstName ?? 'there'),
+      }),
+      parseMode: 'HTML',
+      replyMarkup: startKeyboard(user.language),
     });
   }
 
@@ -355,11 +382,23 @@ export class TelegramUpdateHandler {
         chatId,
         text: formatDebtsMessage(user, lines),
         parseMode: 'HTML',
+        replyMarkup: helpKeyboard(user.language),
       });
       return;
     }
 
-    await this.sendDashboard(chatId, user);
+    const dashboard = await this.reports.dashboard(user.id, user.timezone);
+    const text =
+      command.intent === 'QUERY_BALANCE'
+        ? formatBalanceMessage(user, dashboard)
+        : formatDashboardMessage(user, dashboard);
+
+    await this.telegram.sendMessage({
+      chatId,
+      text,
+      parseMode: 'HTML',
+      replyMarkup: helpKeyboard(user.language),
+    });
   }
 
   private confirmText(user: AuthenticatedUser, command: StructuredCommand): string {

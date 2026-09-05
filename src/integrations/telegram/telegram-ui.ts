@@ -20,6 +20,18 @@ type DashboardNumbers = {
   remaining: string;
 };
 
+export function formatBalanceMessage(
+  user: AuthenticatedUser,
+  dashboard: DashboardNumbers,
+): string {
+  return t(user.language, 'balanceMessage', {
+    remaining: escapeHtml(dashboard.remaining),
+    income: escapeHtml(dashboard.income),
+    expenses: escapeHtml(dashboard.expenses),
+    currency: escapeHtml(user.currency),
+  });
+}
+
 export function formatDashboardMessage(
   user: AuthenticatedUser,
   dashboard: DashboardNumbers,

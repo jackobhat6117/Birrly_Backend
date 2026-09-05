@@ -76,4 +76,17 @@ describe('fallback parser', () => {
     expect(result.amount).toBe('2000');
     expect(result.debtType).toBe('OWED_TO_ME');
   });
+
+  it('parses greetings and balance questions', () => {
+    expect(parseWithFallback({ text: 'Hi Birrly', language: 'en', currency: 'ETB' }).intent).toBe('GREET');
+    expect(parseWithFallback({ text: 'hello', language: 'en', currency: 'ETB' }).intent).toBe('GREET');
+    expect(parseWithFallback({ text: 'thanks', language: 'en', currency: 'ETB' }).intent).toBe('THANKS');
+
+    const balance = parseWithFallback({
+      text: 'what is my remaining money',
+      language: 'en',
+      currency: 'ETB',
+    });
+    expect(balance.intent).toBe('QUERY_BALANCE');
+  });
 });

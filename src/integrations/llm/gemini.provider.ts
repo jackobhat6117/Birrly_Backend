@@ -22,7 +22,7 @@ function buildParserPrompt(input: ParseTextInput): string {
 Allowed intents:
 CREATE_EXPENSE, CREATE_INCOME, CREATE_DEBT, RECORD_DEBT_PAYMENT, CREATE_REMINDER,
 CREATE_BUDGET, CREATE_SAVINGS_GOAL, QUERY_SPENDING, QUERY_BALANCE, QUERY_DEBT,
-QUERY_REPORT, UNKNOWN
+QUERY_REPORT, GREET, THANKS, UNKNOWN
 
 Allowed categorySlug values (lowercase): ${categorySlugs}
 

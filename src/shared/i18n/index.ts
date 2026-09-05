@@ -2,6 +2,9 @@ export type MessageKey =
   | 'welcome'
   | 'help'
   | 'dashboardMessage'
+  | 'balanceMessage'
+  | 'greetReply'
+  | 'thanksReply'
   | 'debtsTitle'
   | 'debtsEmpty'
   | 'askCategory'
@@ -39,9 +42,14 @@ const en: Record<MessageKey, string> = {
   welcome:
     '<b>Birrly</b> · Personal finance in Telegram\n\nHi {name}! Log spend in plain language and see what is left until payday in the Mini App.\n\n<b>Try saying</b>\n• <code>80 taxi</code>\n• <code>350 lunch</code>\n• <code>Abebe 2000</code>\n• <code>Remind me rent on the 1st</code>\n\nTap <b>Open Birrly</b> below or type /help for commands.',
   help:
-    '<b>Commands</b>\n/start — Welcome\n/dashboard — This month summary\n/help — This guide\n/feedback — Send feedback\n\n<b>Natural language</b>\nWrite full sentences — Birrly understands Amharic, English, and mixed messages.\n• Free: {limit} AI parses per day\n• Premium: unlimited\n\n<b>Examples</b>\n• <code>I spent 350 on lunch today</code>\n• <code>80 taxi</code>\n• <code>Abebe owes me 2000</code>\n\n<b>Not a bank</b> — Birrly never reads your bank or guesses balances.',
+    '<b>Commands</b>\n/start — Welcome\n/dashboard — This month summary\n/help — This guide\n/feedback — Send feedback\n\n<b>Natural language</b>\nWrite full sentences — Birrly understands Amharic, English, and mixed messages.\n• Free: {limit} AI parses per day\n• Premium: unlimited\n\n<b>Examples</b>\n• <code>Hi Birrly</code> — greet\n• <code>what is my remaining money</code> — balance\n• <code>I spent 350 on lunch today</code>\n• <code>80 taxi</code>\n• <code>Abebe owes me 2000</code>\n\n<b>Not a bank</b> — Birrly never reads your bank or guesses balances.',
   dashboardMessage:
     '<b>This month</b>\n\n💰 Income\n<code>{income} {currency}</code>\n\n💸 Expenses\n<code>{expenses} {currency}</code>\n\n✨ Remaining until payday\n<code>{remaining} {currency}</code>\n\nOpen the Mini App for categories, debts, and budgets.',
+  balanceMessage:
+    '<b>Remaining until payday</b>\n<code>{remaining} {currency}</code>\n\n💰 Income <code>{income} {currency}</code>\n💸 Spent <code>{expenses} {currency}</code>\n\nAsk anytime — or log spend with <code>80 taxi</code>.',
+  greetReply:
+    'Hi {name}! 👋\n\nI can help you:\n• see <b>remaining money</b> — try <code>what is my remaining money</code>\n• <b>log spend</b> — <code>80 taxi</code> or <code>I spent 350 on lunch</code>\n• track <b>debts</b> — <code>Abebe 2000</code>\n\nTap a button below or type /help.',
+  thanksReply: 'You are welcome! 🙂 Need anything else? Try <code>/dashboard</code> or log a quick expense.',
   debtsTitle: '<b>Open debts</b>',
   debtsEmpty: '<b>Open debts</b>\n\nNone right now. 🎉',
   askCategory: 'What did you spend the <code>{amount} {currency}</code> on?\n\nExample: <code>350 food</code>',
@@ -86,6 +94,11 @@ const am: Record<MessageKey, string> = {
     '<b>አዘዞች</b>\n/start — እንኳን ደህና መጡ\n/dashboard — የዚህ ወር ማጠቃለያ\n/help — ይህ መመሪያ\n/feedback — አስተያየት\n\n<b>ተፈጥሯዊ ቋንቋ</b>\nሙሉ ዓረፍተ ነገር ይጻፉ።\n• ነፃ፦ ቀንበር {limit} AI\n• ፕሪሚየም፦ ገደብ የለም\n\n<b>ባንክ አይደለም</b> — ቢርሊ ባንክዎን አይከፍትም።',
   dashboardMessage:
     '<b>የዚህ ወር</b>\n\n💰 ገቢ\n<code>{income} {currency}</code>\n\n💸 ወጪ\n<code>{expenses} {currency}</code>\n\n✨ እስከ payday\n<code>{remaining} {currency}</code>',
+  balanceMessage:
+    '<b>እስከ payday የቀረ</b>\n<code>{remaining} {currency}</code>\n\n💰 ገቢ <code>{income} {currency}</code>\n💸 ወጪ <code>{expenses} {currency}</code>',
+  greetReply:
+    'ሰላም {name}! 👋\n\n• የቀረ ገንዘብ — <code>what is my remaining money</code>\n• ወጪ — <code>80 taxi</code>\n• ዕዳ — <code>Abebe 2000</code>\n\nከታች ያለውን ቁልፍ ይጫኑ ወይም /help ይጻፉ።',
+  thanksReply: 'አይደለም! 🙂 ሌላ ነገር ከፈለጉ <code>/dashboard</code> ይሞክሩ።',
   debtsTitle: '<b>ክፍት ዕዳዎች</b>',
   debtsEmpty: '<b>ክፍት ዕዳዎች</b>\n\nአሁን የለም። 🎉',
   askCategory: '<code>{amount} {currency}</code> ለምን አወጡ?\n\nለምሳሌ፦ <code>350 food</code>',

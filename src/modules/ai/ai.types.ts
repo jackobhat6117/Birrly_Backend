@@ -10,6 +10,8 @@ export type StructuredIntent =
   | 'QUERY_BALANCE'
   | 'QUERY_DEBT'
   | 'QUERY_REPORT'
+  | 'GREET'
+  | 'THANKS'
   | 'UNKNOWN';
 
 export type StructuredCommand = {

@@ -13,6 +13,8 @@ export const structuredCommandSchema = z.object({
     'QUERY_BALANCE',
     'QUERY_DEBT',
     'QUERY_REPORT',
+    'GREET',
+    'THANKS',
     'UNKNOWN',
   ]),
   amount: z.string().optional(),

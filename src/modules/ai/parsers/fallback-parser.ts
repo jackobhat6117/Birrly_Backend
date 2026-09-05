@@ -131,6 +131,32 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
   }
 
   if (
+    /^(?:hi|hello|hey|yo|good (?:morning|afternoon|evening)|selam|ሰላም)(?:\s+birrly)?[!?.\s]*$/i.test(text) ||
+    /^birrly[!?,.\s]*$/i.test(text) ||
+    /^hi there[!?.]*$/i.test(text)
+  ) {
+    return command({ intent: 'GREET', confidence: 0.95 });
+  }
+
+  if (/^(?:thanks|thank you|thx|አመሰግናለሁ)(?:\s+birrly)?[!?.\s]*$/i.test(text)) {
+    return command({ intent: 'THANKS', confidence: 0.92 });
+  }
+
+  if (
+    /what(?:'s| is) my remaining/.test(lower) ||
+    /how much (?:money |cash )?(?:do i )?have left/.test(lower) ||
+    /what(?:'s| is) left(?: until payday)?/.test(lower) ||
+    /remaining (?:money|cash|balance)/.test(lower) ||
+    /(?:money|cash) left/.test(lower) ||
+    /left until payday/.test(lower) ||
+    /(?:my|what(?:'s| is) my) balance/.test(lower) ||
+    /how much remaining/.test(lower) ||
+    /how much do i have/.test(lower)
+  ) {
+    return command({ intent: 'QUERY_BALANCE', confidence: 0.88 });
+  }
+
+  if (
     /how much did i spend/.test(lower) ||
     /what did i spend/.test(lower) ||
     /spending/.test(lower)
