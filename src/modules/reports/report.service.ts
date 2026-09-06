@@ -87,6 +87,89 @@ export class ReportService {
     };
   }
 
+  /**
+   * Per-category breakdown behind the Reports "Why?" button — purely
+   * arithmetic (no LLM). Categories are ranked by absolute change so the
+   * biggest movers explain the total first; anything left over is folded
+   * into a single "everything else" bucket instead of a long tail.
+   */
+  async expenseChange(userId: string, year: number, month: number) {
+    await this.subscriptions.assertCanAccess(userId, FEATURE.ADVANCED_REPORTS);
+
+    const { start, end } = monthRange(year, month);
+    const previousMonth = month === 1 ? 12 : month - 1;
+    const previousYear = month === 1 ? year - 1 : year;
+    const previous = monthRange(previousYear, previousMonth);
+
+    const [current, prior] = await Promise.all([
+      this.expenseByCategory(userId, start, end),
+      this.expenseByCategory(userId, previous.start, previous.end),
+    ]);
+
+    const categoryIds = new Set([...current.keys(), ...prior.keys()]);
+    const rows = [...categoryIds].map((categoryId) => {
+      const name = current.get(categoryId)?.name ?? prior.get(categoryId)?.name ?? 'Unknown';
+      const currentAmount = current.get(categoryId)?.amount ?? toMoney(0);
+      const priorAmount = prior.get(categoryId)?.amount ?? toMoney(0);
+      return { categoryId, name, ...compareMoney(currentAmount, priorAmount) };
+    });
+
+    rows.sort((a, b) => toMoney(b.delta).abs().cmp(toMoney(a.delta).abs()));
+
+    const TOP_N = 6;
+    const top = rows.slice(0, TOP_N);
+    const rest = rows.slice(TOP_N);
+
+    const categories = rest.length
+      ? [
+          ...top,
+          {
+            categoryId: null,
+            name: 'Everything else',
+            ...compareMoney(
+              rest.reduce((sum, row) => sum.plus(toMoney(row.current)), toMoney(0)),
+              rest.reduce((sum, row) => sum.plus(toMoney(row.previous)), toMoney(0)),
+            ),
+          },
+        ]
+      : top;
+
+    return {
+      period: { year, month },
+      previousPeriod: { year: previousYear, month: previousMonth },
+      totalExpenses: compareMoney(
+        rows.reduce((sum, row) => sum.plus(toMoney(row.current)), toMoney(0)),
+        rows.reduce((sum, row) => sum.plus(toMoney(row.previous)), toMoney(0)),
+      ),
+      categories,
+    };
+  }
+
+  private async expenseByCategory(userId: string, start: Date, end: Date) {
+    const grouped = await this.db.transaction.groupBy({
+      by: ['categoryId'],
+      where: {
+        userId,
+        type: 'EXPENSE',
+        deletedAt: null,
+        transactionDate: { gte: start, lte: end },
+      },
+      _sum: { amount: true },
+    });
+
+    const categories = await this.db.category.findMany({
+      where: { id: { in: grouped.map((row) => row.categoryId) } },
+    });
+    const names = new Map(categories.map((category) => [category.id, category.name]));
+
+    return new Map(
+      grouped.map((row) => [
+        row.categoryId,
+        { name: names.get(row.categoryId) ?? 'Unknown', amount: toMoney(row._sum.amount?.toString() ?? '0') },
+      ]),
+    );
+  }
+
   private async sumByType(userId: string, type: 'EXPENSE' | 'INCOME', start: Date, end: Date) {
     const result = await this.db.transaction.aggregate({
       where: {

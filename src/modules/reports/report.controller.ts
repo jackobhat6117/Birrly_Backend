@@ -28,4 +28,15 @@ export class ReportController {
     );
     res.json({ data });
   });
+
+  expenseChange = asyncHandler(async (req: Request, res: Response) => {
+    const query = monthlyQuerySchema.parse(req.query);
+    const now = nowInZone(req.user!.timezone);
+    const data = await this.reports.expenseChange(
+      req.user!.id,
+      query.year ?? now.year,
+      query.month ?? now.month,
+    );
+    res.json({ data });
+  });
 }
