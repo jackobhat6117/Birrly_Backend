@@ -10,6 +10,7 @@ export const FEATURE = {
   BUDGETS: 'BUDGETS',
   DEBT_TRACKING: 'DEBT_TRACKING',
   IOU_NUDGE: 'IOU_NUDGE',
+  EQUB: 'EQUB',
 } as const;
 
 export type Feature = (typeof FEATURE)[keyof typeof FEATURE];

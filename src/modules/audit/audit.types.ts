@@ -14,7 +14,11 @@ export type AuditAction =
   | 'SAVINGS_GOAL_CREATED'
   | 'SAVINGS_CONTRIBUTED'
   | 'SAVINGS_GOAL_DELETED'
-  | 'SAVINGS_PACE_UPDATED';
+  | 'SAVINGS_PACE_UPDATED'
+  | 'EQUB_CREATED'
+  | 'EQUB_CONTRIBUTION_RECORDED'
+  | 'EQUB_CYCLE_ADVANCED'
+  | 'EQUB_NUDGE_SENT';
 
 export type AuditEntry = {
   userId?: string;

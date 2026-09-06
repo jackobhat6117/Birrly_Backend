@@ -16,6 +16,7 @@ const envSchema = z.object({
   TELEGRAM_WEBHOOK_SECRET: z.string().default(''),
   TELEGRAM_WEBHOOK_URL: z.string().default(''),
   TELEGRAM_MINI_APP_URL: z.string().default(''),
+  TELEGRAM_BOT_USERNAME: z.string().default(''),
   LLM_API_KEY: z.string().default(''),
   LLM_PROVIDER: z.enum(['disabled', 'gemini', 'openai', 'anthropic']).default('gemini'),
   LLM_MODEL: z.string().default('gemini-2.0-flash'),

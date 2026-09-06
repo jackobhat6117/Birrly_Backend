@@ -37,4 +37,17 @@ export class NotificationService {
       throw error;
     }
   }
+
+  /**
+   * Sends a bot DM straight to a raw Telegram chat id, for recipients who are
+   * not Birrly users (e.g. Equb members who linked via the join link). No
+   * notification record is written since there's no internal user to attach it
+   * to. Throws on send failure so callers can count skips.
+   */
+  async notifyTelegramChat(chatId: string, title: string, body: string): Promise<void> {
+    await this.telegram.sendMessage({
+      chatId,
+      text: `${title}\n${body}`,
+    });
+  }
 }

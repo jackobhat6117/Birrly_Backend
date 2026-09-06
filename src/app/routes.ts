@@ -5,6 +5,7 @@ import { rateLimit } from '@/middleware/rate-limit';
 import { accountRoutes } from '@/modules/accounts/account.routes';
 import { categoryRoutes } from '@/modules/categories/category.routes';
 import { debtRoutes } from '@/modules/debts/debt.routes';
+import { equbRoutes } from '@/modules/equb/equb.routes';
 import { reminderRoutes } from '@/modules/reminders/reminder.routes';
 import { reportRoutes } from '@/modules/reports/report.routes';
 import { budgetRoutes } from '@/modules/budgets/budget.routes';
@@ -29,6 +30,7 @@ export function createRoutes(container: AppContainer): Router {
   router.use('/categories', categoryRoutes(container.categoryController));
   router.use('/transactions', transactionRoutes(container.transactionController));
   router.use('/debts', debtRoutes(container.debtController));
+  router.use('/equbs', equbRoutes(container.equbController));
   router.use('/reminders', reminderRoutes(container.reminderController));
   router.use('/reports', reportRoutes(container.reportController));
   router.use('/budgets', budgetRoutes(container.budgetController));

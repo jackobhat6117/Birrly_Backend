@@ -47,7 +47,13 @@ export type MessageKey =
   | 'callbackSaved'
   | 'callbackCancelled'
   | 'callbackExpired'
-  | 'callbackError';
+  | 'callbackError'
+  | 'equbJoinNotFound'
+  | 'equbJoinAlready'
+  | 'equbJoinFull'
+  | 'equbJoinPick'
+  | 'equbJoinedToast'
+  | 'equbJoinedConfirm';
 
 const en: Record<MessageKey, string> = {
   welcome:
@@ -109,6 +115,12 @@ const en: Record<MessageKey, string> = {
   callbackCancelled: 'Cancelled',
   callbackExpired: 'This confirmation expired.',
   callbackError: 'Could not save',
+  equbJoinNotFound: 'This Equb invite link is no longer valid.',
+  equbJoinAlready: "You're already in <b>{equb}</b> as {name}.",
+  equbJoinFull: 'Everyone in <b>{equb}</b> has already joined.',
+  equbJoinPick: "You're joining <b>{equb}</b>. Which member are you?",
+  equbJoinedToast: 'Joined',
+  equbJoinedConfirm: "You're in. You'll get a message here when a contribution is due or it's your turn to collect.",
 };
 
 const am: Record<MessageKey, string> = {
@@ -168,6 +180,12 @@ const am: Record<MessageKey, string> = {
   callbackCancelled: 'ተሰርዟል',
   callbackExpired: 'ጊዜው አልፏል።',
   callbackError: 'መቀመጥ አልተቻለም',
+  equbJoinNotFound: 'ይህ የእቁብ መጋበዣ ሊንክ ከእንግዲህ አይሰራም።',
+  equbJoinAlready: 'በ<b>{equb}</b> ውስጥ እንደ {name} አስቀድመው አሉ።',
+  equbJoinFull: 'ሁሉም የ<b>{equb}</b> አባላት አስቀድመው ተቀላቅለዋል።',
+  equbJoinPick: '<b>{equb}</b> እየተቀላቀሉ ነው። የትኛው አባል ነዎት?',
+  equbJoinedToast: 'ተቀላቅለዋል',
+  equbJoinedConfirm: 'ተቀላቅለዋል። መዋጮ ሲደርስ ወይም የመቀበል ተራዎ ሲሆን እዚህ መልእክት ይደርስዎታል።',
 };
 
 const catalogs: Record<string, Record<MessageKey, string>> = { en, am };

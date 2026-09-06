@@ -15,6 +15,7 @@ const FREE_ENTITLEMENTS: EntitlementMap = {
   [FEATURE.BUDGETS]: true,
   [FEATURE.DEBT_TRACKING]: true,
   [FEATURE.IOU_NUDGE]: true,
+  [FEATURE.EQUB]: false,
 };
 
 const PREMIUM_ENTITLEMENTS: EntitlementMap = {
@@ -29,6 +30,7 @@ const PREMIUM_ENTITLEMENTS: EntitlementMap = {
   [FEATURE.BUDGETS]: true,
   [FEATURE.DEBT_TRACKING]: true,
   [FEATURE.IOU_NUDGE]: true,
+  [FEATURE.EQUB]: true,
 };
 
 export function entitlementsForPlan(plan: 'FREE' | 'PREMIUM_MONTHLY' | 'PREMIUM_YEARLY'): EntitlementMap {

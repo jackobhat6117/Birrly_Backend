@@ -3,6 +3,7 @@ import type { AiParseService } from '@/modules/ai/ai-parse.service';
 import type { BudgetService } from '@/modules/budgets/budget.service';
 import type { CategoryService } from '@/modules/categories/category.service';
 import type { DebtService } from '@/modules/debts/debt.service';
+import type { EqubService } from '@/modules/equb/equb.service';
 import type { ReminderService } from '@/modules/reminders/reminder.service';
 import type { ReportService } from '@/modules/reports/report.service';
 import type { SavingsService } from '@/modules/savings/savings.service';
@@ -38,6 +39,7 @@ export class TelegramUpdateHandler {
     private readonly aiParse: AiParseService,
     private readonly transactions: TransactionService,
     private readonly debts: DebtService,
+    private readonly equbs: EqubService,
     private readonly reminders: ReminderService,
     private readonly reports: ReportService,
     private readonly budgets: BudgetService,
@@ -104,6 +106,11 @@ export class TelegramUpdateHandler {
   ): Promise<void> {
     switch (command) {
       case 'start':
+        // Deep link: /start equb-<token> lands a member on the join flow.
+        if (args.startsWith('equb-')) {
+          await this.handleEqubJoin(chatId, user, args.slice('equb-'.length));
+          return;
+        }
         await this.sendWelcome(chatId, user);
         return;
       case 'help':
@@ -313,6 +320,74 @@ export class TelegramUpdateHandler {
     });
   }
 
+  private async handleEqubJoin(
+    chatId: number,
+    user: AuthenticatedUser,
+    token: string,
+  ): Promise<void> {
+    const equb = await this.equbs.findByJoinToken(token);
+    if (!equb) {
+      await this.telegram.sendMessage({
+        chatId,
+        text: t(user.language, 'equbJoinNotFound'),
+        parseMode: 'HTML',
+      });
+      return;
+    }
+
+    const telegramId = String(chatId);
+    const alreadyLinked = equb.members.find((m) => m.telegramUserId === telegramId);
+    if (alreadyLinked) {
+      await this.telegram.sendMessage({
+        chatId,
+        text: t(user.language, 'equbJoinAlready', {
+          equb: escapeHtml(equb.name),
+          name: escapeHtml(alreadyLinked.name),
+        }),
+        parseMode: 'HTML',
+      });
+      return;
+    }
+
+    const unlinked = equb.members.filter((m) => !m.telegramUserId);
+    if (unlinked.length === 0) {
+      await this.telegram.sendMessage({
+        chatId,
+        text: t(user.language, 'equbJoinFull', { equb: escapeHtml(equb.name) }),
+        parseMode: 'HTML',
+      });
+      return;
+    }
+
+    // Ask which named slot is theirs; tapping links this Telegram account.
+    await this.telegram.sendMessage({
+      chatId,
+      text: t(user.language, 'equbJoinPick', { equb: escapeHtml(equb.name) }),
+      parseMode: 'HTML',
+      replyMarkup: {
+        inline_keyboard: unlinked.map((member) => [
+          { text: member.name, callback_data: `equbjoin:${member.id}` },
+        ]),
+      },
+    });
+  }
+
+  private async completeEqubJoin(
+    chatId: number,
+    from: { id: number; username?: string },
+    callbackId: string,
+    memberId: string,
+  ): Promise<void> {
+    const user = await this.users.ensureFromTelegram({ telegramId: String(from.id), username: from.username });
+    await this.equbs.linkMember(memberId, String(from.id), from.username ?? null);
+    await this.telegram.answerCallbackQuery(callbackId, t(user.language, 'equbJoinedToast'));
+    await this.telegram.sendMessage({
+      chatId,
+      text: t(user.language, 'equbJoinedConfirm'),
+      parseMode: 'HTML',
+    });
+  }
+
   private async handleCallback(update: TelegramUpdate): Promise<void> {
     const callback = update.callback_query;
     if (!callback?.data || !callback.from || !callback.message) {
@@ -335,6 +410,13 @@ export class TelegramUpdateHandler {
       } else if (command === 'help') {
         await this.sendHelp(callback.message.chat.id, user);
       }
+      return;
+    }
+
+    // Equb join: the member tapped which slot is theirs.
+    if (callback.data.startsWith('equbjoin:')) {
+      const memberId = callback.data.slice('equbjoin:'.length);
+      await this.completeEqubJoin(callback.message.chat.id, callback.from, callback.id, memberId);
       return;
     }
 

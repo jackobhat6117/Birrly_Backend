@@ -20,6 +20,9 @@ import { CategoryRepository } from '@/modules/categories/category.repository';
 import { CategoryService } from '@/modules/categories/category.service';
 import { DebtController } from '@/modules/debts/debt.controller';
 import { DebtRepository } from '@/modules/debts/debt.repository';
+import { EqubRepository } from '@/modules/equb/equb.repository';
+import { EqubService } from '@/modules/equb/equb.service';
+import { EqubController } from '@/modules/equb/equb.controller';
 import { DebtService } from '@/modules/debts/debt.service';
 import { NotificationRepository } from '@/modules/notifications/notification.repository';
 import { NotificationService } from '@/modules/notifications/notification.service';
@@ -58,6 +61,7 @@ export function createContainer() {
   const categoryRepository = new CategoryRepository(prisma);
   const transactionRepository = new TransactionRepository(prisma);
   const debtRepository = new DebtRepository(prisma);
+  const equbRepository = new EqubRepository(prisma);
   const reminderRepository = new ReminderRepository(prisma);
   const notificationRepository = new NotificationRepository(prisma);
   const budgetRepository = new BudgetRepository(prisma);
@@ -88,6 +92,14 @@ export function createContainer() {
     userRepository,
     telegramBotAdapter,
   );
+  const equbService = new EqubService(
+    prisma,
+    equbRepository,
+    subscriptionService,
+    notificationService,
+    auditService,
+    { botUsername: config.telegram.botUsername },
+  );
   const reportService = new ReportService(prisma, subscriptionService);
   const budgetService = new BudgetService(
     budgetRepository,
@@ -117,6 +129,7 @@ export function createContainer() {
     aiParse,
     transactionService,
     debtService,
+    equbService,
     reminderService,
     reportService,
     budgetService,
@@ -154,6 +167,7 @@ export function createContainer() {
     categoryController: new CategoryController(categoryService),
     transactionController: new TransactionController(transactionService),
     debtController: new DebtController(debtService),
+    equbController: new EqubController(equbService),
     reminderController: new ReminderController(reminderService),
     reportController: new ReportController(reportService, reportInsightService),
     budgetController: new BudgetController(budgetService),

@@ -68,6 +68,21 @@ enum ReminderFrequency {
   @@map("reminder_frequency")
 }
 
+enum EqubFrequency {
+  WEEKLY
+  MONTHLY
+
+  @@map("equb_frequency")
+}
+
+enum EqubStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+
+  @@map("equb_status")
+}
+
 enum ReminderStatus {
   ACTIVE
   PAUSED
@@ -166,6 +181,7 @@ model User {
   notifications          Notification[]
   aiInteractions         AiInteraction[]
   monthlyInsights        MonthlyInsight[]
+  equbs                  Equb[]
   auditLogs              AuditLog[]
   productEvents          ProductEvent[]
   feedback               Feedback[]
@@ -489,6 +505,73 @@ model MonthlyInsight {
 
   @@unique([userId, year, month])
   @@map("monthly_insights")
+}
+
+/// A rotating savings group (Equb / እቁብ). The organizer owns the record; members
+/// are tracked by name and optionally linked to a Telegram account when they
+/// join via the share link. Birrly never moves money — this observes who has
+/// contributed each cycle and whose turn it is to receive the pot.
+model Equb {
+  id                 String        @id @default(uuid()) @map("id")
+  userId             String        @map("user_id")
+  name               String        @map("name")
+  contributionAmount Decimal       @map("contribution_amount") @db.Decimal(19, 4)
+  currency           String        @map("currency")
+  frequency          EqubFrequency @map("frequency")
+  startDate          DateTime      @map("start_date") @db.Date
+  status             EqubStatus    @default(ACTIVE) @map("status")
+  currentCycle       Int           @default(1) @map("current_cycle")
+  /// Opaque token for the t.me/<bot>?start=equb-<token> deep link.
+  joinToken          String        @unique @map("join_token")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  members       EqubMember[]
+  contributions EqubContribution[]
+
+  @@index([userId, status])
+  @@map("equbs")
+}
+
+model EqubMember {
+  id               String   @id @default(uuid()) @map("id")
+  equbId           String   @map("equb_id")
+  name             String   @map("name")
+  /// Set when the member joins via the share link — enables direct bot nudges.
+  telegramUserId   String?  @map("telegram_user_id")
+  telegramUsername String?  @map("telegram_username")
+  /// 1-based rotation slot: the member whose position equals the Equb's
+  /// currentCycle is the one due to receive the pot this cycle.
+  payoutPosition   Int      @map("payout_position")
+  payoutReceived   Boolean  @default(false) @map("payout_received")
+  joinedAt         DateTime? @map("joined_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  equb          Equb               @relation(fields: [equbId], references: [id], onDelete: Cascade)
+  contributions EqubContribution[]
+
+  @@index([equbId])
+  @@index([telegramUserId])
+  @@map("equb_members")
+}
+
+model EqubContribution {
+  id        String   @id @default(uuid()) @map("id")
+  equbId    String   @map("equb_id")
+  memberId  String   @map("member_id")
+  cycle     Int      @map("cycle")
+  amount    Decimal  @map("amount") @db.Decimal(19, 4)
+  currency  String   @map("currency")
+  paidAt    DateTime @default(now()) @map("paid_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  equb   Equb       @relation(fields: [equbId], references: [id], onDelete: Cascade)
+  member EqubMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, cycle])
+  @@index([equbId, cycle])
+  @@map("equb_contributions")
 }
 
 model AuditLog {
