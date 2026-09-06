@@ -23,6 +23,7 @@ export class DebtService {
     const created = await this.debts.create({
       user: { connect: { id: userId } },
       personName: input.personName.trim(),
+      personTelegramUsername: input.personTelegramUsername ?? null,
       type: input.type,
       originalAmount: amount,
       remainingAmount: amount,

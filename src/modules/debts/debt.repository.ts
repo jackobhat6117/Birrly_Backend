@@ -66,6 +66,7 @@ export function toDebtDto(row: Debt): DebtDto {
   return {
     id: row.id,
     personName: row.personName,
+    personTelegramUsername: row.personTelegramUsername ?? null,
     type: row.type,
     originalAmount: formatMoney(row.originalAmount.toString()),
     remainingAmount: formatMoney(row.remainingAmount.toString()),

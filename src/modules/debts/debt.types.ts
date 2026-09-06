@@ -2,6 +2,7 @@ import type { DebtStatus, DebtType } from '@prisma/client';
 
 export type CreateDebtInput = {
   personName: string;
+  personTelegramUsername?: string;
   type: DebtType;
   amount: string;
   currency?: string;
@@ -17,6 +18,7 @@ export type CreateDebtPaymentInput = {
 export type DebtDto = {
   id: string;
   personName: string;
+  personTelegramUsername: string | null;
   type: DebtType;
   originalAmount: string;
   remainingAmount: string;

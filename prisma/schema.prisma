@@ -243,6 +243,7 @@ model Debt {
   id              String     @id @default(uuid()) @map("id")
   userId          String     @map("user_id")
   personName      String     @map("person_name")
+  personTelegramUsername String? @map("person_telegram_username")
   type            DebtType   @map("type")
   originalAmount  Decimal    @map("original_amount") @db.Decimal(19, 4)
   remainingAmount Decimal    @map("remaining_amount") @db.Decimal(19, 4)
