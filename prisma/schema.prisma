@@ -165,6 +165,7 @@ model User {
   payments               Payment[]
   notifications          Notification[]
   aiInteractions         AiInteraction[]
+  monthlyInsights        MonthlyInsight[]
   auditLogs              AuditLog[]
   productEvents          ProductEvent[]
   feedback               Feedback[]
@@ -469,6 +470,25 @@ model AiInteraction {
 
   @@index([userId, createdAt])
   @@map("ai_interactions")
+}
+
+/// Premium "Insights" on Reports — LLM-phrased narration of numbers the
+/// backend already computed, generated once per user per month and reused
+/// until the user taps Refresh. Never a source of truth for money: `insights`
+/// is a validated, size-capped JSON array of {message, tone}, not free text.
+model MonthlyInsight {
+  id          String   @id @default(uuid()) @map("id")
+  userId      String   @map("user_id")
+  year        Int      @map("year")
+  month       Int      @map("month")
+  insights    Json     @map("insights")
+  generatedAt DateTime @default(now()) @map("generated_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year, month])
+  @@map("monthly_insights")
 }
 
 model AuditLog {

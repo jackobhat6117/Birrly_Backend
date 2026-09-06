@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '@/middleware/async-handler';
 import type { ReportService } from '@/modules/reports/report.service';
+import type { ReportInsightService } from '@/modules/reports/report-insight.service';
 import { nowInZone } from '@/shared/utils/dates';
 
 const monthlyQuerySchema = z.object({
@@ -9,8 +10,15 @@ const monthlyQuerySchema = z.object({
   month: z.coerce.number().int().min(1).max(12).optional(),
 });
 
+const insightsQuerySchema = monthlyQuerySchema.extend({
+  refresh: z.coerce.boolean().optional(),
+});
+
 export class ReportController {
-  constructor(private readonly reports: ReportService) {}
+  constructor(
+    private readonly reports: ReportService,
+    private readonly reportInsights: ReportInsightService,
+  ) {}
 
   dashboard = asyncHandler(async (req: Request, res: Response) => {
     const data = await this.reports.dashboard(req.user!.id, req.user!.timezone);
@@ -36,6 +44,21 @@ export class ReportController {
       req.user!.id,
       query.year ?? now.year,
       query.month ?? now.month,
+    );
+    res.json({ data });
+  });
+
+  insights = asyncHandler(async (req: Request, res: Response) => {
+    const query = insightsQuerySchema.parse(req.query);
+    const now = nowInZone(req.user!.timezone);
+    const data = await this.reportInsights.getOrGenerate(
+      req.user!.id,
+      req.user!.timezone,
+      req.user!.language,
+      req.user!.currency,
+      query.year ?? now.year,
+      query.month ?? now.month,
+      query.refresh ?? false,
     );
     res.json({ data });
   });

@@ -70,6 +70,22 @@ export class GeminiLlmProvider implements LLMProvider {
   }
 
   async parse(input: ParseTextInput): Promise<StructuredCommand> {
+    const text = await this.callGemini(buildParserPrompt(input));
+    const parsed = extractJsonObject(text) as Omit<StructuredCommand, 'source'>;
+    return {
+      ...parsed,
+      source: 'llm',
+      currency: parsed.currency ?? input.currency,
+      missingFields: parsed.missingFields ?? [],
+    };
+  }
+
+  async generateJson(prompt: string): Promise<unknown> {
+    const text = await this.callGemini(prompt);
+    return extractJsonObject(text);
+  }
+
+  private async callGemini(prompt: string): Promise<string> {
     if (!this.isEnabled()) {
       throw new Error('Gemini LLM is not configured.');
     }
@@ -82,7 +98,7 @@ export class GeminiLlmProvider implements LLMProvider {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: buildParserPrompt(input) }] }],
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.1,
           responseMimeType: 'application/json',
@@ -100,13 +116,6 @@ export class GeminiLlmProvider implements LLMProvider {
     if (!text) {
       throw new Error('Gemini returned an empty response.');
     }
-
-    const parsed = extractJsonObject(text) as Omit<StructuredCommand, 'source'>;
-    return {
-      ...parsed,
-      source: 'llm',
-      currency: parsed.currency ?? input.currency,
-      missingFields: parsed.missingFields ?? [],
-    };
+    return text;
   }
 }

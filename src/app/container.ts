@@ -28,6 +28,7 @@ import { ReminderRepository } from '@/modules/reminders/reminder.repository';
 import { ReminderService } from '@/modules/reminders/reminder.service';
 import { ReportController } from '@/modules/reports/report.controller';
 import { ReportService } from '@/modules/reports/report.service';
+import { ReportInsightService } from '@/modules/reports/report-insight.service';
 import { BudgetController } from '@/modules/budgets/budget.controller';
 import { BudgetRepository } from '@/modules/budgets/budget.repository';
 import { BudgetService } from '@/modules/budgets/budget.service';
@@ -99,6 +100,14 @@ export function createContainer() {
   const adminService = new AdminService(prisma, feedbackRepository, subscriptionService);
   const feedbackService = new FeedbackService(feedbackRepository);
   const llmProvider = createLlmProvider(config.llm);
+  const reportInsightService = new ReportInsightService(
+    prisma,
+    subscriptionService,
+    reportService,
+    budgetService,
+    savingsService,
+    llmProvider,
+  );
   const interpreter = new AiInterpreter(llmProvider);
   const aiUsage = new AiUsageService(redis, config.ai.dailyLimit);
   const aiParse = new AiParseService(interpreter, aiUsage, subscriptionService, llmProvider.isEnabled());
@@ -146,7 +155,7 @@ export function createContainer() {
     transactionController: new TransactionController(transactionService),
     debtController: new DebtController(debtService),
     reminderController: new ReminderController(reminderService),
-    reportController: new ReportController(reportService),
+    reportController: new ReportController(reportService, reportInsightService),
     budgetController: new BudgetController(budgetService),
     savingsController: new SavingsController(savingsService),
     analyticsController: new AnalyticsController(analyticsService),

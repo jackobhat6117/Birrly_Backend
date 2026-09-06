@@ -5,6 +5,13 @@ import { logger } from '@/shared/logger/logger';
 export interface LLMProvider {
   isEnabled(): boolean;
   parse(input: ParseTextInput): Promise<StructuredCommand>;
+  /**
+   * Generic "prompt in, parsed JSON out" call for features that build their
+   * own prompt (e.g. report insights) rather than the fixed transaction
+   * parser. The caller is responsible for validating the shape — this layer
+   * only guarantees it's JSON, not that it matches any particular schema.
+   */
+  generateJson(prompt: string): Promise<unknown>;
 }
 
 export class DisabledLLMProvider implements LLMProvider {
@@ -13,6 +20,10 @@ export class DisabledLLMProvider implements LLMProvider {
   }
 
   parse(_input: ParseTextInput): Promise<StructuredCommand> {
+    return Promise.reject(new Error('LLM provider is disabled.'));
+  }
+
+  generateJson(_prompt: string): Promise<unknown> {
     return Promise.reject(new Error('LLM provider is disabled.'));
   }
 }
