@@ -39,6 +39,7 @@ enum TransactionSource {
   API
   RECURRING
   SYSTEM
+  SMS
 
   @@map("transaction_source")
 }

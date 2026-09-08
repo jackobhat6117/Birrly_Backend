@@ -11,6 +11,7 @@ export const createTransactionSchema = z.object({
   description: z.string().max(280).optional(),
   transactionDate: isoDateSchema.optional(),
   idempotencyKey: z.string().min(1).max(128).optional(),
+  source: z.literal('SMS').optional(),
 });
 
 export const updateTransactionSchema = z.object({
