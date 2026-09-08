@@ -5,6 +5,9 @@ export const config = {
   env: env.NODE_ENV,
   appProfile: env.APP_PROFILE,
   isOat: env.APP_PROFILE === 'oat',
+  features: {
+    equbEnabled: env.EQUB_ENABLED,
+  },
   isProduction: env.NODE_ENV === 'production',
   isDevelopment: env.NODE_ENV === 'development',
   isTest: env.NODE_ENV === 'test',

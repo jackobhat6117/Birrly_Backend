@@ -40,6 +40,7 @@ export type UpgradeRequestDto = {
   amount: string;
   currency: string;
   status: string;
+  adminNote: string | null;
   createdAt: string;
 };
 

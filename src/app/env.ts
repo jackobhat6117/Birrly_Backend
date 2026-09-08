@@ -25,6 +25,11 @@ const envSchema = z.object({
     .default('false')
     .transform((value) => value === 'true'),
   APP_PROFILE: z.enum(['production', 'oat']).default('production'),
+  // Equb is built but held back for phase 1. Set EQUB_ENABLED=true to mount its routes.
+  EQUB_ENABLED: z
+    .string()
+    .default('false')
+    .transform((value) => value === 'true'),
   RUN_DEMO_SEED: z
     .string()
     .default('false')

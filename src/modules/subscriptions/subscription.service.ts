@@ -108,8 +108,10 @@ export class SubscriptionService {
   }
 
   async getCheckoutInfo(userId: string): Promise<CheckoutInfo & { activeRequest: UpgradeRequestDto | null }> {
+    // Most recent request regardless of status, so the client can surface PENDING,
+    // REJECTED, or APPROVED — not just silently drop the request once it leaves PENDING.
     const activeRequest = await this.db.subscriptionUpgradeRequest.findFirst({
-      where: { userId, status: 'PENDING' },
+      where: { userId },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -129,6 +131,7 @@ export class SubscriptionService {
             amount: activeRequest.amount.toFixed(2),
             currency: activeRequest.currency,
             status: activeRequest.status,
+            adminNote: activeRequest.adminNote,
             createdAt: activeRequest.createdAt.toISOString(),
           }
         : null,
@@ -150,6 +153,7 @@ export class SubscriptionService {
         amount: existing.amount.toFixed(2),
         currency: existing.currency,
         status: existing.status,
+        adminNote: existing.adminNote,
         createdAt: existing.createdAt.toISOString(),
       };
     }
@@ -195,6 +199,7 @@ export class SubscriptionService {
       amount: created.amount.toFixed(2),
       currency: created.currency,
       status: created.status,
+      adminNote: created.adminNote,
       createdAt: created.createdAt.toISOString(),
     };
   }

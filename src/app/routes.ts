@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import type { AppContainer } from '@/app/container';
+import { config } from '@/app/config';
 import { createAuthMiddleware } from '@/middleware/auth';
 import { rateLimit } from '@/middleware/rate-limit';
 import { accountRoutes } from '@/modules/accounts/account.routes';
@@ -30,7 +31,10 @@ export function createRoutes(container: AppContainer): Router {
   router.use('/categories', categoryRoutes(container.categoryController));
   router.use('/transactions', transactionRoutes(container.transactionController));
   router.use('/debts', debtRoutes(container.debtController));
-  router.use('/equbs', equbRoutes(container.equbController));
+  // Equb is dark for the first-phase release — only mount when explicitly enabled.
+  if (config.features.equbEnabled) {
+    router.use('/equbs', equbRoutes(container.equbController));
+  }
   router.use('/reminders', reminderRoutes(container.reminderController));
   router.use('/reports', reportRoutes(container.reportController));
   router.use('/budgets', budgetRoutes(container.budgetController));
