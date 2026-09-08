@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { TELEGRAM_INIT_DATA_MAX_AGE_SECONDS } from '@/shared/constants/app';
 import { UnauthorizedError } from '@/shared/errors/app-error';
 
@@ -85,5 +85,54 @@ export function verifyTelegramInitData(
     firstName: user.first_name,
     lastName: user.last_name,
     languageCode: user.language_code,
+  };
+}
+
+/**
+ * Verify data from the Telegram Login Widget (web, not Mini App).
+ * The widget uses SHA-256(botToken) as the HMAC key — different from TMA's
+ * HMAC("WebAppData", botToken) key.
+ */
+export function verifyTelegramLoginWidget(
+  data: Record<string, string>,
+  botToken: string,
+  maxAgeSeconds = 86_400,
+): TelegramAuthUser {
+  const { hash, ...rest } = data;
+  if (!hash || !botToken) {
+    throw new UnauthorizedError();
+  }
+
+  const dataCheckString = Object.entries(rest)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${k}=${v}`)
+    .join('\n');
+
+  const secretKey = createHash('sha256').update(botToken).digest();
+  const computed = hmacSha256(secretKey, dataCheckString).toString('hex');
+
+  if (!safeEqualHex(computed, hash)) {
+    throw new UnauthorizedError('Telegram login data is invalid.');
+  }
+
+  const authDate = Number(rest.auth_date);
+  if (!Number.isFinite(authDate)) {
+    throw new UnauthorizedError();
+  }
+
+  const ageSeconds = Math.floor(Date.now() / 1000) - authDate;
+  if (ageSeconds > maxAgeSeconds) {
+    throw new UnauthorizedError('Telegram login data has expired.');
+  }
+
+  if (!rest.id) {
+    throw new UnauthorizedError();
+  }
+
+  return {
+    telegramId: rest.id,
+    username: rest.username,
+    firstName: rest.first_name,
+    lastName: rest.last_name,
   };
 }

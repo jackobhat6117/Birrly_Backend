@@ -50,6 +50,7 @@ import { AnalyticsController } from '@/modules/analytics/analytics.controller';
 import { AnalyticsService } from '@/modules/analytics/analytics.service';
 import { AdminController } from '@/modules/admin/admin.controller';
 import { AdminService } from '@/modules/admin/admin.service';
+import { AuthController } from '@/modules/auth/auth.controller';
 import { TestController } from '@/modules/test/test.controller';
 import { FeedbackController } from '@/modules/feedback/feedback.controller';
 import { FeedbackRepository } from '@/modules/feedback/feedback.repository';
@@ -174,6 +175,7 @@ export function createContainer() {
     savingsController: new SavingsController(savingsService),
     analyticsController: new AnalyticsController(analyticsService),
     adminController: new AdminController(adminService),
+    authController: new AuthController(userService),
     testController: new TestController(),
     feedbackController: new FeedbackController(feedbackService),
     telegramWebhookController: new TelegramWebhookController(telegramHandler, telegramIdempotency),

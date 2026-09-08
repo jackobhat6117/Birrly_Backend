@@ -45,6 +45,9 @@ const envSchema = z.object({
   AI_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
   ADMIN_JWT_SECRET: z.string().min(1).default('dev-admin-jwt-secret-change-me'),
   ADMIN_JWT_EXPIRES_SEC: z.coerce.number().int().positive().default(86_400),
+  WEB_JWT_SECRET: z.string().min(1).default('dev-web-jwt-secret-change-me'),
+  // 30 days by default — web sessions live longer than admin sessions
+  WEB_JWT_EXPIRES_SEC: z.coerce.number().int().positive().default(2_592_000),
   ADMIN_BOOTSTRAP_EMAIL: z.string().default(''),
   ADMIN_BOOTSTRAP_PASSWORD: z.string().default(''),
   TELEBIRR_PHONE: z.string().default('+251 91 100 0000'),
@@ -80,6 +83,13 @@ if (
   parsed.data.ADMIN_JWT_SECRET === 'dev-admin-jwt-secret-change-me'
 ) {
   throw new Error('ADMIN_JWT_SECRET must be set in production.');
+}
+
+if (
+  parsed.data.NODE_ENV === 'production' &&
+  parsed.data.WEB_JWT_SECRET === 'dev-web-jwt-secret-change-me'
+) {
+  throw new Error('WEB_JWT_SECRET must be set in production.');
 }
 
 export const env = parsed.data;

@@ -6,6 +6,7 @@ import { createContainer } from '@/app/container';
 import { health, ready } from '@/app/health';
 import { createRoutes } from '@/app/routes';
 import { adminRoutes } from '@/modules/admin/admin.routes';
+import { authRoutes } from '@/modules/auth/auth.routes';
 import { testRoutes } from '@/modules/test/test.routes';
 import { env } from '@/app/env';
 import { errorHandler, notFoundHandler } from '@/middleware/error-handler';
@@ -49,6 +50,8 @@ export function createApp() {
   }
 
   app.use('/api/v1/admin', adminRoutes(container.adminController));
+  // Public — no TMA auth; rate-limited inside authRoutes
+  app.use('/api/v1/auth', authRoutes(container.authController));
   app.use('/api/v1', createRoutes(container));
   app.use(notFoundHandler);
   app.use(errorHandler);

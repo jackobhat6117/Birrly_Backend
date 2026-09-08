@@ -39,6 +39,10 @@ export const config = {
     bootstrapEmail: env.ADMIN_BOOTSTRAP_EMAIL.trim().toLowerCase(),
     bootstrapPassword: env.ADMIN_BOOTSTRAP_PASSWORD,
   },
+  web: {
+    jwtSecret: env.WEB_JWT_SECRET,
+    jwtExpiresSec: env.WEB_JWT_EXPIRES_SEC,
+  },
   ai: {
     /** Free-plan LLM parses per user per UTC day. Premium is unlimited. */
     dailyLimit: env.AI_RATE_LIMIT_MAX,
