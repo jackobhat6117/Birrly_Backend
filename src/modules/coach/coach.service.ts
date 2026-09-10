@@ -78,7 +78,7 @@ export class CoachService {
     const [report, change, budgetList, goals, debtList, recurring] = await Promise.all([
       this.reports.monthly(ctx.userId, ctx.timezone, year, month) as Promise<MonthlyReport>,
       this.reports.expenseChange(ctx.userId, year, month).catch(() => null),
-      this.budgets.list(ctx.userId, ctx.timezone, year, month).catch(() => []),
+      this.budgets.list(ctx.userId, ctx.timezone).catch(() => []),
       this.savings.list(ctx.userId).catch(() => []),
       this.debts.list(ctx.userId).catch(() => []),
       this.coachRepo.recurringCandidates(ctx.userId, ...this.recurringWindow(year, month)).catch(() => []),
@@ -105,7 +105,7 @@ export class CoachService {
         direction: c.direction,
       })),
       budgets: budgetList.map((b) => ({
-        categoryName: b.categoryName,
+        categoryName: b.categoryName ?? b.name,
         amount: b.amount,
         spent: b.spent,
         status: b.status,

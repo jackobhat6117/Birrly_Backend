@@ -533,7 +533,7 @@ export class TelegramUpdateHandler {
         currency: user.currency,
       });
       return t(user.language, 'recordedBudget', {
-        category: escapeHtml(saved.categoryName),
+        category: escapeHtml(saved.categoryName ?? saved.name),
         amount: escapeHtml(saved.amount),
         currency: escapeHtml(saved.currency),
       });

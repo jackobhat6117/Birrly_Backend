@@ -33,7 +33,7 @@ async function main() {
     if (existing) {
       await prisma.category.update({
         where: { id: existing.id },
-        data: { name: category.name, kind: category.kind },
+        data: { name: category.name, kind: category.kind, icon: category.icon, color: category.color },
       });
       continue;
     }
@@ -43,6 +43,8 @@ async function main() {
         name: category.name,
         slug: category.slug,
         kind: category.kind,
+        icon: category.icon,
+        color: category.color,
         isSystem: true,
         userId: null,
       },

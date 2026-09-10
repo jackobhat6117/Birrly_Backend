@@ -63,7 +63,10 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - '${API_PORT:-3000}:3000'
+      # Loopback only — the API is reached through api.birrly.com via the reverse
+      # proxy on this VPS, never on the raw port. Publishing on 0.0.0.0 exposed the
+      # API directly (Docker bypasses ufw, so a firewall rule would not close it).
+      - '127.0.0.1:${API_PORT:-3000}:3000'
     entrypoint: ['/app/scripts/docker-api-entrypoint.sh']
     command: ['node', 'dist/app/server.js']
     healthcheck:

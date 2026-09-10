@@ -60,7 +60,7 @@ export class ReportInsightService {
     const [report, change, budgetList, goals] = await Promise.all([
       this.reports.monthly(userId, timezone, year, month),
       this.reports.expenseChange(userId, year, month).catch(() => null),
-      this.budgets.list(userId, timezone, year, month).catch(() => []),
+      this.budgets.list(userId, timezone).catch(() => []),
       this.savings.list(userId).catch(() => []),
     ]);
 
@@ -81,7 +81,7 @@ export class ReportInsightService {
         direction: c.direction,
       })),
       budgets: budgetList.map((b) => ({
-        categoryName: b.categoryName,
+        categoryName: b.categoryName ?? b.name,
         amount: b.amount,
         spent: b.spent,
         status: b.status,

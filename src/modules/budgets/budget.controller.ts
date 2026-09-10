@@ -7,8 +7,8 @@ export class BudgetController {
   constructor(private readonly budgets: BudgetService) {}
 
   list = asyncHandler(async (req: Request, res: Response) => {
-    const query = listBudgetsQuerySchema.parse(req.query);
-    const data = await this.budgets.list(req.user!.id, req.user!.timezone, query.year, query.month);
+    listBudgetsQuerySchema.parse(req.query); // tolerated for back-compat; each budget computes its own period
+    const data = await this.budgets.list(req.user!.id, req.user!.timezone);
     res.json({ data });
   });
 
