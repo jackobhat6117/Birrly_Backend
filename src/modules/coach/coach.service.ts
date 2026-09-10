@@ -9,8 +9,9 @@ import type { LLMProvider } from '@/integrations/llm/llm.provider';
 import { FEATURE } from '@/shared/constants/features';
 import { buildCoachPrompt, type CoachPromptFacts } from '@/modules/coach/coach.prompt';
 import { coachAnalysisResponseSchema } from '@/modules/coach/coach.schema';
-import type { CoachAnalysisDto, CoachLens, CoachMetrics, CoachSection } from '@/modules/coach/coach.types';
-import { addMoney, formatMoney, toMoney } from '@/shared/utils/money';
+import { computeCoachMetrics } from '@/modules/coach/coach.metrics';
+import { collectAllowedNumbers, guardCoachOutput } from '@/modules/coach/coach.guard';
+import type { CoachAnalysisDto, CoachLens, CoachSection } from '@/modules/coach/coach.types';
 import { monthRange } from '@/shared/utils/dates';
 import { logger } from '@/shared/logger/logger';
 
@@ -84,7 +85,7 @@ export class CoachService {
       this.coachRepo.recurringCandidates(ctx.userId, ...this.recurringWindow(year, month)).catch(() => []),
     ]);
 
-    const metrics = this.computeMetrics(report, budgetList, recurring);
+    const metrics = computeCoachMetrics(report, budgetList, recurring);
 
     const facts: CoachPromptFacts = {
       language: ctx.language,
@@ -139,6 +140,17 @@ export class CoachService {
       return null;
     }
 
+    // Enforce (not just request) the non-advisory + no-invented-numbers contract.
+    // If the LLM slips, hide the card rather than surface advice or a made-up figure.
+    const guard = guardCoachOutput({ headline, sections }, collectAllowedNumbers(facts, metrics));
+    if (!guard.ok) {
+      logger.warn(
+        { userId: ctx.userId, lens, violations: guard.violations },
+        'Coach output failed guardrails; discarding',
+      );
+      return null;
+    }
+
     const dto: CoachAnalysisDto = {
       lens,
       period: { year, month },
@@ -169,40 +181,5 @@ export class CoachService {
     }
     const start = monthRange(startYear, startMonth).start;
     return [start, end];
-  }
-
-  /**
-   * Deterministic figures the client can trust without the LLM. Health score is
-   * a simple heuristic: savings rate (up to 60 pts) + budget adherence (up to
-   * 40 pts). Budgets absent → a neutral 20 for that half.
-   */
-  private computeMetrics(
-    report: MonthlyReport,
-    budgets: Array<{ status: string }>,
-    recurring: Array<{ annualCost: string }>,
-  ): CoachMetrics {
-    const savingsRate = toMoney(report.savingsRate);
-    const savingsComponent = Math.min(60, Math.max(0, savingsRate.mul(1.2).toNumber()));
-
-    let budgetComponent = 20;
-    if (budgets.length > 0) {
-      const withinBudget = budgets.filter((b) => b.status !== 'over').length;
-      budgetComponent = Math.round((withinBudget / budgets.length) * 40);
-    }
-
-    const healthScore = Math.max(0, Math.min(100, Math.round(savingsComponent + budgetComponent)));
-
-    const recurringAnnualCost = recurring.length
-      ? formatMoney(recurring.reduce((sum, r) => addMoney(sum, r.annualCost), toMoney(0)))
-      : null;
-
-    return {
-      income: report.income,
-      expenses: report.expenses,
-      savings: report.savings,
-      savingsRate: report.savingsRate,
-      healthScore,
-      recurringAnnualCost,
-    };
   }
 }

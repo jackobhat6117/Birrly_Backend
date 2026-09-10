@@ -44,7 +44,7 @@ Return a single JSON object with these fields:
 
 User language hint: ${input.language}
 Default currency: ${input.currency}
-
+${input.userContext ? `\n${input.userContext}\n` : ''}
 User message:
 ${input.text}`;
 }

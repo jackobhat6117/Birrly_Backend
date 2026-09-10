@@ -95,3 +95,54 @@ describe('TransactionService', () => {
     });
   });
 });
+
+describe('TransactionService.update — AI correction capture (ADR 002)', () => {
+  const aiInteractions = { recordEdit: vi.fn() };
+
+  function serviceWithAi() {
+    return new TransactionService(
+      transactions as never,
+      accounts as never,
+      categories as never,
+      audit as never,
+      aiInteractions as never,
+    );
+  }
+
+  const updatedRow = (over: Record<string, unknown> = {}) => ({
+    id: 'tx-1',
+    accountId: 'acc-1',
+    categoryId: 'cat-food',
+    type: 'EXPENSE',
+    amount: { toString: () => '420.00' },
+    currency: 'ETB',
+    description: 'Lunch',
+    transactionDate: new Date('2026-08-25T00:00:00.000Z'),
+    source: 'TELEGRAM',
+    createdAt: new Date('2026-08-25T00:00:00.000Z'),
+    ...over,
+  });
+
+  it('records an edit as a correction when an AI-linked transaction changes', async () => {
+    aiInteractions.recordEdit.mockClear();
+    transactions.findByIdForUser.mockResolvedValue({ id: 'tx-1', type: 'EXPENSE', aiInteractionId: 'ai-1' });
+    transactions.update.mockResolvedValue(updatedRow());
+
+    await serviceWithAi().update('user-1', 'tx-1', 'Africa/Addis_Ababa', { amount: '420' });
+
+    expect(aiInteractions.recordEdit).toHaveBeenCalledWith(
+      'ai-1',
+      expect.objectContaining({ intent: 'CREATE_EXPENSE', amount: '420.00', categoryId: 'cat-food' }),
+    );
+  });
+
+  it('does NOT record a correction for a manually-entered (unlinked) transaction', async () => {
+    aiInteractions.recordEdit.mockClear();
+    transactions.findByIdForUser.mockResolvedValue({ id: 'tx-2', type: 'EXPENSE', aiInteractionId: null });
+    transactions.update.mockResolvedValue(updatedRow({ id: 'tx-2' }));
+
+    await serviceWithAi().update('user-1', 'tx-2', 'Africa/Addis_Ababa', { amount: '420' });
+
+    expect(aiInteractions.recordEdit).not.toHaveBeenCalled();
+  });
+});

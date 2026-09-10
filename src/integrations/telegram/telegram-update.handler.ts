@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import type { AiParseService } from '@/modules/ai/ai-parse.service';
+import type { AiInteractionService } from '@/modules/ai/ai-interaction.service';
 import type { BudgetService } from '@/modules/budgets/budget.service';
 import type { CategoryService } from '@/modules/categories/category.service';
 import type { DebtService } from '@/modules/debts/debt.service';
@@ -48,6 +49,7 @@ export class TelegramUpdateHandler {
     private readonly conversations: ConversationStore,
     private readonly telegram: TelegramBotAdapter,
     private readonly feedback: FeedbackService,
+    private readonly aiInteractions: AiInteractionService,
     private readonly freeAiDailyLimit: number,
   ) {}
 
@@ -221,10 +223,20 @@ export class TelegramUpdateHandler {
     }
 
     const token = randomBytes(6).toString('hex');
+    // Best-effort label capture (no-op unless AI_TRAINING_CAPTURE is on): remember
+    // what we predicted so we can score it against what the user confirms below.
+    const aiInteractionId = await this.aiInteractions.recordParse({
+      userId: user.id,
+      inputText: text,
+      language: user.language,
+      command,
+      usedLlm: parsed.usedLlm,
+    });
     await this.conversations.save(user.id, {
       token,
       command,
       createdAt: new Date().toISOString(),
+      aiInteractionId: aiInteractionId ?? undefined,
     });
 
     await this.telegram.sendMessage({
@@ -432,6 +444,7 @@ export class TelegramUpdateHandler {
     }
 
     if (action === 'no') {
+      await this.aiInteractions.recordOutcome(pending.aiInteractionId, 'CANCELED');
       await this.conversations.clear(user.id);
       await this.telegram.answerCallbackQuery(callback.id, t(user.language, 'callbackCancelled'));
       await this.telegram.sendMessage({
@@ -443,7 +456,14 @@ export class TelegramUpdateHandler {
     }
 
     try {
-      const confirmation = await this.commit(user, pending.command);
+      const confirmation = await this.commit(user, pending.command, pending.aiInteractionId);
+      // Confirmed as-is → a positive label (predicted === final).
+      await this.aiInteractions.recordOutcome(
+        pending.aiInteractionId,
+        'CONFIRMED',
+        pending.command,
+        pending.command,
+      );
       await this.conversations.clear(user.id);
       await this.telegram.answerCallbackQuery(callback.id, t(user.language, 'callbackSaved'));
       await this.telegram.sendMessage({
@@ -466,7 +486,11 @@ export class TelegramUpdateHandler {
     }
   }
 
-  private async commit(user: AuthenticatedUser, command: StructuredCommand): Promise<string> {
+  private async commit(
+    user: AuthenticatedUser,
+    command: StructuredCommand,
+    aiInteractionId?: string,
+  ): Promise<string> {
     const idempotencyKey = `telegram:${command.intent}:${command.amount}:${command.categorySlug}:${command.personName}:${command.date}:${command.reminderTitle}:${command.description}`;
 
     if (command.intent === 'CREATE_EXPENSE' || command.intent === 'CREATE_INCOME') {
@@ -478,6 +502,7 @@ export class TelegramUpdateHandler {
         transactionDate: command.date,
         source: 'TELEGRAM',
         idempotencyKey,
+        aiInteractionId,
       });
       return t(
         user.language,

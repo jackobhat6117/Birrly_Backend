@@ -9,3 +9,6 @@ coverage/
 .vscode/
 prisma/*.db
 prisma/*.db-journal
+
+# Offline eval reports (generated, machine-local)
+eval-reports/

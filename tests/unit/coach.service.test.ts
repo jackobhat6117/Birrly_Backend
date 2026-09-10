@@ -144,6 +144,21 @@ describe('CoachService.getOrGenerate', () => {
     expect(coachAnalysis.upsert).not.toHaveBeenCalled();
   });
 
+  it('discards guardrail-violating output (financial advice) and returns null', async () => {
+    const generateJson = vi.fn().mockResolvedValue({
+      headline: 'You have savings to spare.',
+      sections: [
+        { title: 'Grow it', tone: 'neutral', detail: 'Consider investing your surplus in stocks.' },
+      ],
+    });
+    const { service, coachAnalysis } = makeService({ llm: { generateJson } });
+
+    const result = await service.getOrGenerate('cashflow', ctx, 2026, 9);
+
+    expect(result).toBeNull();
+    expect(coachAnalysis.upsert).not.toHaveBeenCalled();
+  });
+
   it('returns null when the LLM is disabled, without erroring', async () => {
     const { service } = makeService({ llm: { isEnabled: () => false } });
 

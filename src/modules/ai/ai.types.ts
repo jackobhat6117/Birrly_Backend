@@ -34,4 +34,10 @@ export type ParseTextInput = {
   text: string;
   language: string;
   currency: string;
+  /**
+   * Optional compact personalization hint (this user's frequent categories,
+   * merchant→category habits, active goals). Conditions the LLM parser only —
+   * the rule-based parser ignores it. Never authoritative; a hint, not a fact.
+   */
+  userContext?: string;
 };

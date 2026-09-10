@@ -23,6 +23,6 @@
     "useUnknownInCatchVariables": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "prisma/seed.ts", "tests/**/*.ts"],
+  "include": ["src/**/*.ts", "prisma/seed.ts", "tests/**/*.ts", "scripts/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

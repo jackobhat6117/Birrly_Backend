@@ -11,6 +11,8 @@ export type CreateTransactionInput = {
   transactionDate?: string;
   source?: TransactionSource;
   idempotencyKey?: string;
+  /** Soft link to the AI parse that produced this transaction (ADR 002). */
+  aiInteractionId?: string;
 };
 
 export type UpdateTransactionInput = {

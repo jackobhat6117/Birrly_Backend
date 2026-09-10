@@ -1512,8 +1512,11 @@ score, annualized recurring costs, category trends), the LLM only organizes and
 narrates them into a headline + sections, output is validated by Zod and cached
 per `(user, lens, month)` in `coach_analyses`. The LLM never writes to the
 database and never produces investment/loan/tax advice — a fixed non-advisory
-disclaimer ships with every response. Returns `null` (client hides the card)
-when the LLM is disabled or its output fails validation.
+disclaimer ships with every response, and a post-generation guard
+(`coach.guard.ts`) discards any output that slips into financial advice or cites
+a number not present in the source facts. Returns `null` (client hides the card)
+when the LLM is disabled or its output fails validation or the guard. Covered by
+CI evals (`tests/evals/coach-evals`, `npm run eval:parse`).
 
 ## 39.1 Free plan (must ship)
 

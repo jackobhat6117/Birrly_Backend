@@ -16,6 +16,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "eval:parse": "vitest run tests/evals --reporter=verbose",
+    "eval:llm": "tsx scripts/eval-llm-parse.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",

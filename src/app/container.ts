@@ -14,6 +14,10 @@ import { AccountService } from '@/modules/accounts/account.service';
 import { AiInterpreter } from '@/modules/ai/ai.interpreter';
 import { AiParseService } from '@/modules/ai/ai-parse.service';
 import { AiUsageService } from '@/modules/ai/ai-usage.service';
+import { AiInteractionRepository } from '@/modules/ai/ai-interaction.repository';
+import { AiInteractionService } from '@/modules/ai/ai-interaction.service';
+import { UserContextRepository } from '@/modules/ai/user-context/user-context.repository';
+import { UserContextService } from '@/modules/ai/user-context/user-context.service';
 import { AuditService } from '@/modules/audit/audit.service';
 import { CategoryController } from '@/modules/categories/category.controller';
 import { CategoryRepository } from '@/modules/categories/category.repository';
@@ -77,11 +81,17 @@ export function createContainer() {
   const userService = new UserService(prisma, userRepository, auditService);
   const accountService = new AccountService(accountRepository);
   const categoryService = new CategoryService(categoryRepository, auditService);
+  const aiInteractionRepository = new AiInteractionRepository(prisma);
+  const aiInteractionService = new AiInteractionService(
+    aiInteractionRepository,
+    config.ai.trainingCaptureEnabled,
+  );
   const transactionService = new TransactionService(
     transactionRepository,
     accountService,
     categoryService,
     auditService,
+    aiInteractionService,
   );
   const debtService = new DebtService(prisma, debtRepository, subscriptionService, auditService);
   const reminderScheduler = new BullmqReminderScheduler();
@@ -137,7 +147,15 @@ export function createContainer() {
   );
   const interpreter = new AiInterpreter(llmProvider);
   const aiUsage = new AiUsageService(redis, config.ai.dailyLimit);
-  const aiParse = new AiParseService(interpreter, aiUsage, subscriptionService, llmProvider.isEnabled());
+  const userContextRepository = new UserContextRepository(prisma);
+  const userContextService = new UserContextService(userContextRepository, redis);
+  const aiParse = new AiParseService(
+    interpreter,
+    aiUsage,
+    subscriptionService,
+    llmProvider.isEnabled(),
+    userContextService,
+  );
   const conversations = new ConversationStore(redis);
   const telegramHandler = new TelegramUpdateHandler(
     userService,
@@ -153,6 +171,7 @@ export function createContainer() {
     conversations,
     telegramBotAdapter,
     feedbackService,
+    aiInteractionService,
     config.ai.dailyLimit,
   );
   const telegramIdempotency = new TelegramIdempotencyStore(prisma);

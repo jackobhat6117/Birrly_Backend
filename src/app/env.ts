@@ -43,6 +43,13 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
   AI_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
+  // Off by default. Captures parsed AI commands + their confirmed/corrected
+  // outcome as labeled data. Enable ONLY with user consent + a retention policy
+  // (see docs/adr/002-ai-native-data-flywheel.md) — payloads carry personal data.
+  AI_TRAINING_CAPTURE: z
+    .string()
+    .default('false')
+    .transform((value) => value === 'true'),
   ADMIN_JWT_SECRET: z.string().min(1).default('dev-admin-jwt-secret-change-me'),
   ADMIN_JWT_EXPIRES_SEC: z.coerce.number().int().positive().default(86_400),
   WEB_JWT_SECRET: z.string().min(1).default('dev-web-jwt-secret-change-me'),

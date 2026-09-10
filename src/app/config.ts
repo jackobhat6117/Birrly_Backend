@@ -46,6 +46,8 @@ export const config = {
   ai: {
     /** Free-plan LLM parses per user per UTC day. Premium is unlimited. */
     dailyLimit: env.AI_RATE_LIMIT_MAX,
+    /** Opt-in capture of parse predictions + outcomes as labeled data. Off unless consented. */
+    trainingCaptureEnabled: env.AI_TRAINING_CAPTURE,
   },
   subscription: {
     telebirrPhone: env.TELEBIRR_PHONE.trim() || '+251 91 100 0000',

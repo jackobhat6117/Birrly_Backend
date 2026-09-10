@@ -6,6 +6,8 @@ export type PendingConversation = {
   token: string;
   command: StructuredCommand;
   createdAt: string;
+  /** Id of the AiInteraction row for this parse, to close the label loop on confirm/cancel. */
+  aiInteractionId?: string;
 };
 
 export class ConversationStore {

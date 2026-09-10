@@ -246,6 +246,10 @@ model Transaction {
   transactionDate DateTime          @map("transaction_date") @db.Date
   source          TransactionSource @default(API) @map("source")
   idempotencyKey  String?           @map("idempotency_key")
+  // Soft link (no FK) to the AiInteraction that produced this transaction, when
+  // it came from an AI-parsed message. Lets a later edit be recorded as a
+  // correction label (ADR 002). Null for manually-entered transactions.
+  aiInteractionId String?           @map("ai_interaction_id")
   deletedAt       DateTime?         @map("deleted_at")
   createdAt       DateTime          @default(now()) @map("created_at")
   updatedAt       DateTime          @updatedAt @map("updated_at")
@@ -563,18 +567,33 @@ model Notification {
   @@map("notifications")
 }
 
+/// One row per AI parse that reached a decision point, used as labeled data to
+/// measure and improve parsing. `predictedCommand` is what the parser produced;
+/// `finalCommand` is what the user actually confirmed/corrected; `outcome`
+/// records how it resolved (CONFIRMED / EDITED / CANCELED). A CONFIRMED row with
+/// finalCommand === predictedCommand is a positive example; an EDITED row is a
+/// gold correction. Capture is opt-in (see `AI_TRAINING_CAPTURE`) and must be
+/// paired with user consent + de-identification before training — `inputText`
+/// and command payloads can contain personal/financial data.
 model AiInteraction {
-  id        String   @id @default(uuid()) @map("id")
-  userId    String   @map("user_id")
-  intent    String?  @map("intent")
-  success   Boolean  @map("success")
-  provider  String   @map("provider")
-  latencyMs Int?     @map("latency_ms")
-  createdAt DateTime @default(now()) @map("created_at")
+  id               String   @id @default(uuid()) @map("id")
+  userId           String   @map("user_id")
+  intent           String?  @map("intent")
+  success          Boolean  @map("success")
+  provider         String   @map("provider")
+  latencyMs        Int?     @map("latency_ms")
+  inputText        String?  @map("input_text")
+  language         String?  @map("language")
+  predictedCommand Json?    @map("predicted_command")
+  finalCommand     Json?    @map("final_command")
+  outcome          String?  @map("outcome")
+  corrected        Boolean  @default(false) @map("corrected")
+  createdAt        DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+  @@index([outcome, corrected])
   @@map("ai_interactions")
 }
 

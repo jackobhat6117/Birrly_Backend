@@ -22,6 +22,8 @@ npm test                   # vitest run
 npm run test:watch         # vitest watch
 npx vitest run tests/unit/debt.service.test.ts   # single test file
 npx vitest run -t "some test name"                # by test name
+npm run eval:parse         # AI eval gate (tests/evals/): parser golden set + coach metric/guardrail evals, scoreboard + CI gate
+npm run eval:llm           # offline: replay golden set against the real LLM parser (needs LLM_API_KEY), rule-vs-LLM report → eval-reports/
 ```
 
 Database (Prisma):

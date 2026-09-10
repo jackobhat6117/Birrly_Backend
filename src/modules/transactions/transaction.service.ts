@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import type { AccountService } from '@/modules/accounts/account.service';
 import type { AuditService } from '@/modules/audit/audit.service';
 import type { CategoryService } from '@/modules/categories/category.service';
+import type { AiInteractionService } from '@/modules/ai/ai-interaction.service';
 import { toTransactionDto, type TransactionRepository } from '@/modules/transactions/transaction.repository';
 import type {
   CreateTransactionInput,
@@ -20,6 +21,7 @@ export class TransactionService {
     private readonly accounts: AccountService,
     private readonly categories: CategoryService,
     private readonly audit: AuditService,
+    private readonly aiInteractions?: AiInteractionService,
   ) {}
 
   async create(userId: string, currency: string, timezone: string, input: CreateTransactionInput): Promise<TransactionDto> {
@@ -55,6 +57,7 @@ export class TransactionService {
         transactionDate,
         source: input.source ?? 'API',
         idempotencyKey: input.idempotencyKey,
+        ...(input.aiInteractionId ? { aiInteractionId: input.aiInteractionId } : {}),
       });
 
       await this.audit.record({
@@ -126,6 +129,25 @@ export class TransactionService {
       entityType: 'transaction',
       entityId: updated.id,
     });
+
+    // If this transaction came from an AI parse and the user changed a
+    // labelable field, record the edit as a gold correction (ADR 002).
+    // Best-effort: a no-op unless capture is enabled, and never blocks the edit.
+    const aiInteractionId = (existing as { aiInteractionId?: string | null }).aiInteractionId;
+    const changedLabelableField =
+      input.amount !== undefined ||
+      input.categoryId !== undefined ||
+      input.description !== undefined ||
+      input.transactionDate !== undefined;
+    if (this.aiInteractions && aiInteractionId && changedLabelableField) {
+      await this.aiInteractions.recordEdit(aiInteractionId, {
+        intent: updated.type === 'EXPENSE' ? 'CREATE_EXPENSE' : 'CREATE_INCOME',
+        amount: formatMoney(updated.amount.toString()),
+        categoryId: updated.categoryId,
+        description: updated.description,
+        transactionDate: updated.transactionDate.toISOString().slice(0, 10),
+      });
+    }
 
     return toTransactionDto(updated);
   }
