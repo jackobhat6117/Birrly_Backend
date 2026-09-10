@@ -32,6 +32,9 @@ import { ReminderService } from '@/modules/reminders/reminder.service';
 import { ReportController } from '@/modules/reports/report.controller';
 import { ReportService } from '@/modules/reports/report.service';
 import { ReportInsightService } from '@/modules/reports/report-insight.service';
+import { CoachController } from '@/modules/coach/coach.controller';
+import { CoachRepository } from '@/modules/coach/coach.repository';
+import { CoachService } from '@/modules/coach/coach.service';
 import { BudgetController } from '@/modules/budgets/budget.controller';
 import { BudgetRepository } from '@/modules/budgets/budget.repository';
 import { BudgetService } from '@/modules/budgets/budget.service';
@@ -121,6 +124,17 @@ export function createContainer() {
     savingsService,
     llmProvider,
   );
+  const coachRepository = new CoachRepository(prisma);
+  const coachService = new CoachService(
+    prisma,
+    subscriptionService,
+    reportService,
+    budgetService,
+    savingsService,
+    debtService,
+    coachRepository,
+    llmProvider,
+  );
   const interpreter = new AiInterpreter(llmProvider);
   const aiUsage = new AiUsageService(redis, config.ai.dailyLimit);
   const aiParse = new AiParseService(interpreter, aiUsage, subscriptionService, llmProvider.isEnabled());
@@ -156,6 +170,7 @@ export function createContainer() {
     reminderService,
     notificationService,
     reportService,
+    coachService,
     budgetService,
     savingsService,
     subscriptionService,
@@ -171,6 +186,7 @@ export function createContainer() {
     equbController: new EqubController(equbService),
     reminderController: new ReminderController(reminderService),
     reportController: new ReportController(reportService, reportInsightService),
+    coachController: new CoachController(coachService),
     budgetController: new BudgetController(budgetService),
     savingsController: new SavingsController(savingsService),
     analyticsController: new AnalyticsController(analyticsService),

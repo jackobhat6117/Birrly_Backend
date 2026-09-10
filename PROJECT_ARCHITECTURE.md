@@ -1501,7 +1501,19 @@ SAVINGS_GOALS              Premium only
 BUDGETS                    Premium only
 DEBT_TRACKING              Free and Premium (unlimited IOUs)
 IOU_NUDGE                  Free and Premium (Telegram share, no payment)
+AI_COACH                   Premium only (AI Money Coach: cash-flow/leaks/audit)
 ```
+
+## 39.2 AI Money Coach (`AI_COACH`, Premium)
+
+A premium lens over the user's own numbers. `GET /api/v1/coach/analysis?lens=cashflow|leaks|audit`
+reuses the report-insight pipeline: the domain computes every figure (health
+score, annualized recurring costs, category trends), the LLM only organizes and
+narrates them into a headline + sections, output is validated by Zod and cached
+per `(user, lens, month)` in `coach_analyses`. The LLM never writes to the
+database and never produces investment/loan/tax advice — a fixed non-advisory
+disclaimer ships with every response. Returns `null` (client hides the card)
+when the LLM is disabled or its output fails validation.
 
 ## 39.1 Free plan (must ship)
 

@@ -53,7 +53,7 @@ Wiring happens in [src/app/container.ts](src/app/container.ts) (manual DI — re
 
 ### Module layout
 
-Each domain lives under `src/modules/<name>/` with `*.controller.ts`, `*.service.ts`, `*.repository.ts`, `*.routes.ts` (not every module has all of these — e.g. read-only or admin modules may skip a repository). Current modules: `users`, `accounts`, `transactions`, `debts`, `categories`, `budgets`, `savings`, `reminders`, `reports`, `notifications`, `subscriptions`, `analytics`, `admin`, `audit`, `feedback`, `equb` (rotating savings — built but hidden behind `EQUB_ENABLED`), `ai`, `test` (OAT-only test/reset endpoints).
+Each domain lives under `src/modules/<name>/` with `*.controller.ts`, `*.service.ts`, `*.repository.ts`, `*.routes.ts` (not every module has all of these — e.g. read-only or admin modules may skip a repository). Current modules: `users`, `accounts`, `transactions`, `debts`, `categories`, `budgets`, `savings`, `reminders`, `reports`, `notifications`, `subscriptions`, `analytics`, `admin`, `audit`, `feedback`, `equb` (rotating savings — built but hidden behind `EQUB_ENABLED`), `ai`, `coach` (premium AI Money Coach — cash-flow/leaks/audit lenses over the user's own numbers), `test` (OAT-only test/reset endpoints).
 
 External SDKs stay isolated in `src/integrations/` (`telegram/`, `llm/`, `payments/`) — never called directly from domain services. The dependency direction is Telegram/HTTP handler -> domain service -> domain result -> back out through the integration adapter, never the reverse (domain services must not know Telegram message formatting).
 

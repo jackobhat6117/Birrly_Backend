@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "/Users/eyobteklu/Desktop/infinite-projects/Personal_Finance_Assistant/frontend/Birrly/apps/web", "run", "dev"],
       "port": 3002
+    },
+    {
+      "name": "mini-app",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/eyobteklu/Desktop/infinite-projects/Personal_Finance_Assistant/frontend/Birrly/apps/mini-app", "run", "dev"],
+      "port": 5173
     }
   ]
 }
