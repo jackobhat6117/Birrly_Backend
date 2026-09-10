@@ -1,4 +1,4 @@
-import { Prisma, type TransactionType } from '@prisma/client';
+import type { Prisma, TransactionType } from '@prisma/client';
 import type { DbClient } from '@/database/prisma';
 import { formatMoney } from '@/shared/utils/money';
 
