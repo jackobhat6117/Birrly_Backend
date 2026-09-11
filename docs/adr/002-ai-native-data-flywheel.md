@@ -75,5 +75,7 @@ label must never break or slow the user's actual action.
 - Payloads contain personal/financial data. Before enabling in production we must add:
   explicit opt-in, a retention window, and de-identification (strip names/phones, IOU
   person-names) for any training/eval export. These are prerequisites, tracked separately.
-- Next increments: capture Mini App transaction edits as corrections; capture `UNKNOWN`
-  parses as negatives; add the CI evals harness that consumes this data.
+- Done since: Mini App transaction edits captured as corrections; **`UNKNOWN` dead-ends
+  captured as labeled negatives** (the Telegram handler records the miss before sending the
+  "I'm not sure" nudge — the most valuable signal, previously discarded); the CI evals
+  harness (`tests/evals/`) consumes this shape. Remaining: consent UX + retention (Phase 03).

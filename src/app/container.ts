@@ -170,6 +170,7 @@ export function createContainer() {
     equbService,
     reminderService,
     reportService,
+    coachService,
     budgetService,
     savingsService,
     categoryService,

@@ -53,13 +53,19 @@ export type MessageKey =
   | 'equbJoinFull'
   | 'equbJoinPick'
   | 'equbJoinedToast'
-  | 'equbJoinedConfirm';
+  | 'equbJoinedConfirm'
+  | 'coachTitle'
+  | 'coachPremiumOnly'
+  | 'coachUnavailable'
+  | 'coachScore'
+  | 'coachRecurring'
+  | 'coachDisclaimer';
 
 const en: Record<MessageKey, string> = {
   welcome:
     '<b>Birrly</b> · Personal finance in Telegram\n\nHi {name}! Log spend in plain language and see what is left until payday in the Mini App.\n\n<b>Try saying</b>\n• <code>80 taxi</code>\n• <code>350 lunch</code>\n• <code>Abebe 2000</code>\n• <code>Remind me rent on the 1st</code>\n\nTap <b>Open Birrly</b> below or type /help for commands.',
   help:
-    '<b>Commands</b>\n/start — Welcome\n/dashboard — This month summary\n/help — This guide\n/feedback — Send feedback\n\n<b>Natural language</b>\nWrite full sentences — Birrly understands Amharic, English, and mixed messages.\n• Free: {limit} AI parses per day\n• Premium: unlimited\n\n<b>Examples</b>\n• <code>Hi Birrly</code> — greet\n• <code>how are you</code> — small talk\n• <code>how much money is left</code> — balance\n• <code>I spent 350 on lunch today</code>\n• <code>80 taxi</code> / <code>80 ታክሲ</code>\n• <code>Abebe owes me 2000</code>\n• <code>Abebe paid 500</code> — debt payment\n• <code>budget 5000 food</code> — set budget\n• <code>save 10000 for phone</code> — savings goal\n\n<b>Not a bank</b> — Birrly never reads your bank or guesses balances.',
+    '<b>Commands</b>\n/start — Welcome\n/dashboard — This month summary\n/coach — Money Coach (Premium)\n/help — This guide\n/feedback — Send feedback\n\n<b>Natural language</b>\nWrite full sentences — Birrly understands Amharic, English, and mixed messages.\n• Free: {limit} AI parses per day\n• Premium: unlimited\n\n<b>Examples</b>\n• <code>Hi Birrly</code> — greet\n• <code>how are you</code> — small talk\n• <code>how much money is left</code> — balance\n• <code>I spent 350 on lunch today</code>\n• <code>80 taxi</code> / <code>80 ታክሲ</code>\n• <code>Abebe owes me 2000</code>\n• <code>Abebe paid 500</code> — debt payment\n• <code>budget 5000 food</code> — set budget\n• <code>save 10000 for phone</code> — savings goal\n\n<b>Not a bank</b> — Birrly never reads your bank or guesses balances.',
   dashboardMessage:
     '<b>This month</b>\n\n💰 Income\n<code>{income} {currency}</code>\n\n💸 Expenses\n<code>{expenses} {currency}</code>\n\n✨ Remaining until payday\n<code>{remaining} {currency}</code>\n\nOpen the Mini App for categories, debts, and budgets.',
   balanceMessage:
@@ -121,13 +127,19 @@ const en: Record<MessageKey, string> = {
   equbJoinPick: "You're joining <b>{equb}</b>. Which member are you?",
   equbJoinedToast: 'Joined',
   equbJoinedConfirm: "You're in. You'll get a message here when a contribution is due or it's your turn to collect.",
+  coachTitle: '🧭 <b>Money Coach</b> · {lens}',
+  coachPremiumOnly: 'The Money Coach is a Premium feature. Upgrade in the Mini App to get a personalized read of your cash flow, leaks, and a monthly audit.',
+  coachUnavailable: 'Your coach is warming up — log a bit more this month and try again. (It also needs Premium AI enabled.)',
+  coachScore: '📊 Health score: <b>{score}</b>/100',
+  coachRecurring: '🔁 Recurring / year: <b>{amount} {currency}</b>',
+  coachDisclaimer: 'A look at your own logged spending — not financial advice.',
 };
 
 const am: Record<MessageKey, string> = {
   welcome:
     '<b>ቢርሊ</b> · በቴሌግራም የግል ገንዘብ\n\nሰላም {name}! ወጪዎን በቀላል ቋንቋ ይመዝግቡ። እስከ የደመወዝ ቀን የቀረውን በ Mini App ይመልከቱ።\n\n<b>ለምሳሌ</b>\n• <code>80 ታክሲ</code>\n• <code>350 ምሳ</code>\n• <code>Abebe 2000</code>\n\n<b>ቢርሊ ክፈት</b> ይጫኑ ወይም /help ይጻፉ።',
   help:
-    '<b>አዘዞች</b>\n/start — እንኳን ደህና መጡ\n/dashboard — የዚህ ወር ማጠቃለያ\n/help — ይህ መመሪያ\n/feedback — አስተያየት\n\n<b>ተፈጥሯዊ ቋንቋ</b>\nሙሉ ዓረፍተ ነገር ይጻፉ።\n• ነፃ፦ ቀንበር {limit} AI\n• ፕሪሚየም፦ ገደብ የለም\n\n<b>ባንክ አይደለም</b> — ቢርሊ ባንክዎን አይከፍትም።',
+    '<b>አዘዞች</b>\n/start — እንኳን ደህና መጡ\n/dashboard — የዚህ ወር ማጠቃለያ\n/coach — የገንዘብ አማካሪ (ፕሪሚየም)\n/help — ይህ መመሪያ\n/feedback — አስተያየት\n\n<b>ተፈጥሯዊ ቋንቋ</b>\nሙሉ ዓረፍተ ነገር ይጻፉ።\n• ነፃ፦ ቀንበር {limit} AI\n• ፕሪሚየም፦ ገደብ የለም\n\n<b>ባንክ አይደለም</b> — ቢርሊ ባንክዎን አይከፍትም።',
   dashboardMessage:
     '<b>የዚህ ወር</b>\n\n💰 ገቢ\n<code>{income} {currency}</code>\n\n💸 ወጪ\n<code>{expenses} {currency}</code>\n\n✨ እስከ payday\n<code>{remaining} {currency}</code>',
   balanceMessage:
@@ -186,6 +198,12 @@ const am: Record<MessageKey, string> = {
   equbJoinPick: '<b>{equb}</b> እየተቀላቀሉ ነው። የትኛው አባል ነዎት?',
   equbJoinedToast: 'ተቀላቅለዋል',
   equbJoinedConfirm: 'ተቀላቅለዋል። መዋጮ ሲደርስ ወይም የመቀበል ተራዎ ሲሆን እዚህ መልእክት ይደርስዎታል።',
+  coachTitle: '🧭 <b>የገንዘብ አማካሪ</b> · {lens}',
+  coachPremiumOnly: 'የገንዘብ አማካሪ የፕሪሚየም አገልግሎት ነው። የገንዘብ ፍሰትዎን፣ መፍሰሻዎችን እና ወርሃዊ ግምገማ ለማግኘት በ Mini App ይሻሻሉ።',
+  coachUnavailable: 'አማካሪዎ በዝግጅት ላይ ነው — በዚህ ወር ትንሽ ተጨማሪ መዝግበው እንደገና ይሞክሩ። (ፕሪሚየም AI መንቃት አለበት።)',
+  coachScore: '📊 የጤና ነጥብ: <b>{score}</b>/100',
+  coachRecurring: '🔁 ተደጋጋሚ / ዓመት: <b>{amount} {currency}</b>',
+  coachDisclaimer: 'የራስዎን የወጪ መዝገብ ዕይታ ነው — የገንዘብ ምክር አይደለም።',
 };
 
 const catalogs: Record<string, Record<MessageKey, string>> = { en, am };

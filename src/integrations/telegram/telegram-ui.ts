@@ -1,5 +1,6 @@
 import { config } from '@/app/config';
 import type { AuthenticatedUser } from '@/modules/users/user.types';
+import type { CoachAnalysisDto } from '@/modules/coach/coach.types';
 import { t, type MessageKey } from '@/shared/i18n';
 
 export function escapeHtml(value: string): string {
@@ -43,6 +44,59 @@ export function formatDashboardMessage(
     remaining: escapeHtml(dashboard.remaining),
     currency: escapeHtml(user.currency),
   });
+}
+
+const COACH_LENS_LABEL: Record<string, { en: string; am: string }> = {
+  cashflow: { en: 'Cash flow', am: 'የገንዘብ ፍሰት' },
+  leaks: { en: 'Money leaks', am: 'የገንዘብ መፍሰሻ' },
+  audit: { en: 'Audit', am: 'ግምገማ' },
+};
+
+const COACH_TONE_MARK: Record<string, string> = {
+  positive: '🟢',
+  neutral: '🔵',
+  warning: '🟠',
+};
+
+/** Renders an AI Money Coach analysis as a Telegram HTML message. The headline
+ * and section text arrive already in the user's language (the coach prompt is
+ * localized); the labels/score/disclaimer come from i18n. LLM text is escaped. */
+export function formatCoachMessage(user: AuthenticatedUser, analysis: CoachAnalysisDto): string {
+  const lang = user.language === 'am' ? 'am' : 'en';
+  const label = COACH_LENS_LABEL[analysis.lens]?.[lang] ?? analysis.lens;
+
+  const lines: string[] = [
+    t(user.language, 'coachTitle', { lens: label }),
+    '',
+    escapeHtml(analysis.headline),
+    '',
+    t(user.language, 'coachScore', { score: analysis.metrics.healthScore }),
+  ];
+
+  if (analysis.metrics.recurringAnnualCost) {
+    lines.push(
+      t(user.language, 'coachRecurring', {
+        amount: escapeHtml(analysis.metrics.recurringAnnualCost),
+        currency: escapeHtml(user.currency),
+      }),
+    );
+  }
+
+  lines.push('');
+  for (const section of analysis.sections) {
+    const mark = COACH_TONE_MARK[section.tone] ?? '•';
+    lines.push(`${mark} <b>${escapeHtml(section.title)}</b> — ${escapeHtml(section.detail)}`);
+    if (section.recommendation) {
+      lines.push(`   → ${escapeHtml(section.recommendation)}`);
+    }
+    if (section.impact) {
+      lines.push(`   <b>${escapeHtml(section.impact)}</b>`);
+    }
+  }
+
+  lines.push('');
+  lines.push(`<i>${escapeHtml(t(user.language, 'coachDisclaimer'))}</i>`);
+  return lines.join('\n');
 }
 
 export function formatSpendingMessage(

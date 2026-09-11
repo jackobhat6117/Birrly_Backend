@@ -7,6 +7,9 @@ import type { DebtService } from '@/modules/debts/debt.service';
 import type { EqubService } from '@/modules/equb/equb.service';
 import type { ReminderService } from '@/modules/reminders/reminder.service';
 import type { ReportService } from '@/modules/reports/report.service';
+import type { CoachService } from '@/modules/coach/coach.service';
+import type { CoachLens } from '@/modules/coach/coach.types';
+import { COACH_LENSES } from '@/modules/coach/coach.types';
 import type { SavingsService } from '@/modules/savings/savings.service';
 import type { TransactionService } from '@/modules/transactions/transaction.service';
 import type { AuthenticatedUser } from '@/modules/users/user.types';
@@ -20,6 +23,7 @@ import {
   confirmKeyboard,
   escapeHtml,
   formatBalanceMessage,
+  formatCoachMessage,
   formatDashboardMessage,
   formatDebtsMessage,
   formatSpendingMessage,
@@ -33,6 +37,7 @@ import { AppError, ERROR_CODE } from '@/shared/errors/app-error';
 import { t } from '@/shared/i18n';
 import { logger } from '@/shared/logger/logger';
 import { formatMoney } from '@/shared/utils/money';
+import { nowInZone } from '@/shared/utils/dates';
 
 export class TelegramUpdateHandler {
   constructor(
@@ -43,6 +48,7 @@ export class TelegramUpdateHandler {
     private readonly equbs: EqubService,
     private readonly reminders: ReminderService,
     private readonly reports: ReportService,
+    private readonly coach: CoachService,
     private readonly budgets: BudgetService,
     private readonly savings: SavingsService,
     private readonly categories: CategoryService,
@@ -121,6 +127,9 @@ export class TelegramUpdateHandler {
       case 'dashboard':
         await this.sendDashboard(chatId, user);
         return;
+      case 'coach':
+        await this.sendCoach(chatId, user, args);
+        return;
       case 'feedback':
         await this.handleFeedback(chatId, user, args);
         return;
@@ -164,6 +173,16 @@ export class TelegramUpdateHandler {
     const command = parsed.command;
 
     if (command.intent === 'UNKNOWN') {
+      // A dead-end is the most valuable learning signal — record the miss as a
+      // labeled negative (no-op unless capture is enabled). This is what makes
+      // "the parser failed on this phrasing" trainable instead of invisible.
+      await this.aiInteractions.recordParse({
+        userId: user.id,
+        inputText: text,
+        language: user.language,
+        command,
+        usedLlm: parsed.usedLlm,
+      });
       await this.sendNudge(chatId, user, text);
       return;
     }
@@ -305,6 +324,65 @@ export class TelegramUpdateHandler {
     await this.telegram.sendMessage({
       chatId,
       text: formatDashboardMessage(user, dashboard),
+      parseMode: 'HTML',
+      replyMarkup: helpKeyboard(user.language),
+    });
+  }
+
+  /**
+   * `/coach [cashflow|leaks|audit]` — the AI Money Coach inside Telegram. Same
+   * CoachService the Mini App uses; Premium-gated by the service itself. Sends a
+   * quiet Premium prompt to free users and a "warming up" note when the LLM is
+   * off or there isn't enough data yet.
+   */
+  private async sendCoach(chatId: number, user: AuthenticatedUser, args: string): Promise<void> {
+    const requested = args.trim().toLowerCase();
+    const lens: CoachLens = (COACH_LENSES as readonly string[]).includes(requested)
+      ? (requested as CoachLens)
+      : 'cashflow';
+    const now = nowInZone(user.timezone);
+
+    let analysis;
+    try {
+      analysis = await this.coach.getOrGenerate(
+        lens,
+        {
+          userId: user.id,
+          timezone: user.timezone,
+          language: user.language,
+          currency: user.currency,
+          monthlyIncome: user.monthlyIncome,
+          paydayDay: user.paydayDay,
+        },
+        now.year,
+        now.month,
+      );
+    } catch (error) {
+      if (error instanceof AppError && error.code === ERROR_CODE.SUBSCRIPTION_REQUIRED) {
+        await this.telegram.sendMessage({
+          chatId,
+          text: t(user.language, 'coachPremiumOnly'),
+          parseMode: 'HTML',
+          replyMarkup: helpKeyboard(user.language),
+        });
+        return;
+      }
+      throw error;
+    }
+
+    if (!analysis) {
+      await this.telegram.sendMessage({
+        chatId,
+        text: t(user.language, 'coachUnavailable'),
+        parseMode: 'HTML',
+        replyMarkup: helpKeyboard(user.language),
+      });
+      return;
+    }
+
+    await this.telegram.sendMessage({
+      chatId,
+      text: formatCoachMessage(user, analysis),
       parseMode: 'HTML',
       replyMarkup: helpKeyboard(user.language),
     });
