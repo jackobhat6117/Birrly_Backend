@@ -63,7 +63,7 @@ External SDKs stay isolated in `src/integrations/` (`telegram/`, `llm/`, `paymen
 
 ### AI parsing
 
-Free tier: rule-based parser only. Premium (`FEATURE.AI_NATURAL_LANGUAGE`): Gemini LLM parsing (`AiParseService` / `AiInterpreter` in `src/modules/ai/`), with the rule-based parser as fallback when the LLM fails or the free daily quota (`AI_RATE_LIMIT_MAX`) is exhausted. Both paths produce the same `StructuredCommand` shape that domain services execute — the AI layer never touches Prisma. Prompts under `src/modules/ai/prompts/` should be versioned (e.g. `*.v1.ts`) if changed materially.
+**Rules-first cascade** (`AiInterpreter` in `src/modules/ai/`): the rule parser runs first; a confident hit (`confidence >= 0.7` — shorthand like `80 taxi`, `Abebe owes me 2000`) is returned instantly with no LLM call (free, and it doesn't spend a user's AI quota). Only ambiguous messages go to the LLM. The rule parser is also the **always-on fallback** when the LLM is disabled, over quota, or errors — the core logging path must never depend on the LLM (§69). Free tier gets a daily LLM allowance (`AI_RATE_LIMIT_MAX`, default 10); Premium (`FEATURE.AI_NATURAL_LANGUAGE`) is unlimited. When a free user is over quota AND the message needs the LLM (rules returned UNKNOWN), the bot shows a friendly upgrade prompt with a Mini App button. Both paths produce the same `StructuredCommand` the domain executes — the AI layer never touches Prisma. LLM parses are personalized via `UserContextService` (frequent categories, merchant→category habits). Prompts under `src/modules/ai/prompts/` should be versioned (e.g. `*.v1.ts`) if changed materially.
 
 ### Auth
 

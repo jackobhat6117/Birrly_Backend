@@ -30,6 +30,7 @@ import {
   helpKeyboard,
   htmlConfirmText,
   parseSlashCommand,
+  upgradeKeyboard,
   startKeyboard,
 } from '@/integrations/telegram/telegram-ui';
 import { buildHelpfulNudge } from '@/integrations/telegram/nudge-message';
@@ -161,11 +162,9 @@ export class TelegramUpdateHandler {
     if (parsed.quotaExceeded) {
       await this.telegram.sendMessage({
         chatId,
-        text: `${t(user.language, 'aiQuotaExceeded', {
-          limit: parsed.usage.limit,
-        })}\n\n${buildHelpfulNudge(user.language, text, true)}`,
+        text: t(user.language, 'aiQuotaExceeded', { limit: parsed.usage.limit }),
         parseMode: 'HTML',
-        replyMarkup: startKeyboard(user.language),
+        replyMarkup: upgradeKeyboard(user.language),
       });
       return;
     }

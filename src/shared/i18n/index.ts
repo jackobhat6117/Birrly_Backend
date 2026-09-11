@@ -40,6 +40,7 @@ export type MessageKey =
   | 'feedbackReceived'
   | 'aiQuotaExceeded'
   | 'openAppButton'
+  | 'upgradeButton'
   | 'btnDashboard'
   | 'btnHelp'
   | 'confirmButton'
@@ -105,7 +106,7 @@ const en: Record<MessageKey, string> = {
     'I did not understand that.\n\nTry <code>80 taxi</code>, <code>Abebe 2000</code>, or /help.',
   aiUnavailable: 'AI is unavailable. Please enter amount and category, for example: <code>300 food</code>',
   aiQuotaExceeded:
-    'You have used your <b>{limit}</b> free AI messages for today.\n\nUpgrade to Premium for unlimited natural language, or use the quick options below.',
+    "You've used your <b>{limit}</b> free AI messages for today — it resets tomorrow. 💡 You can still log anytime with shorthand like <code>80 taxi</code> or <code>Abebe 2000</code>.\n\nWant to chat in full sentences without limits? Upgrade to Premium for unlimited AI.",
   unauthorized: 'I could not verify this request.',
   internalError: 'Something went wrong. Please try again.',
   languageSet: 'Language set to English.',
@@ -113,6 +114,7 @@ const en: Record<MessageKey, string> = {
     '<b>Send feedback</b>\n\nReply with:\n<code>/feedback your message here</code>\n\nExample:\n<code>/feedback The dashboard is confusing</code>',
   feedbackReceived: 'Thanks — your feedback was received. We read every message. 🙏',
   openAppButton: '📱 Open Birrly',
+  upgradeButton: '⭐ Upgrade to Premium',
   btnDashboard: '📊 Summary',
   btnHelp: '❓ Help',
   confirmButton: '✓ Confirm',
@@ -177,13 +179,14 @@ const am: Record<MessageKey, string> = {
   unrecognized: 'አልገባኝም። <code>80 ታክሲ</code> ወይም /help ይሞክሩ።',
   aiUnavailable: 'AI አይሰራም። <code>300 food</code> ይጻፉ።',
   aiQuotaExceeded:
-    'ለዛሬ <b>{limit}</b> ነፃ AI መልእክቶች ጨርሰዋል።\n\nለገደብ የሌለው ፕሪሚየም ይቀይሩ፣ ወይም ከታች ያሉትን ቀላል መንገዶች ይሞክሩ።',
+    'ለዛሬ <b>{limit}</b> ነፃ AI መልእክቶች ጨርሰዋል — ነገ እንደገና ይጀምራል። 💡 እንደ <code>80 taxi</code> ወይም <code>Abebe 2000</code> ባሉ አጭር መንገዶች መመዝገብ ይችላሉ።\n\nበሙሉ ዓረፍተ ነገር ያለ ገደብ ማውራት ይፈልጋሉ? ላልተገደበ AI ወደ ፕሪሚየም ይሻሻሉ።',
   unauthorized: 'ጥያቄውን ማረጋገጥ አልተቻለም።',
   internalError: 'ችግር ተፈጥሯል። እንደገና ይሞክሩ።',
   languageSet: 'ቋንቋ ወደ አማርኛ ተቀይሯል።',
   feedbackPrompt: '<b>አስተያየት</b>\n\n<code>/feedback መልእክትዎ</code> ይላኩ',
   feedbackReceived: 'አመሰግናለሁ — አስተያየትዎ ተቀብሏል። 🙏',
   openAppButton: '📱 ቢርሊ ክፈት',
+  upgradeButton: '⭐ ወደ ፕሪሚየም ይሻሻሉ',
   btnDashboard: '📊 ማጠቃለያ',
   btnHelp: '❓ መረጃ',
   confirmButton: '✓ አረጋግጥ',

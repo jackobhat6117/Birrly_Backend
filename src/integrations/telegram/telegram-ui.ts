@@ -167,6 +167,21 @@ export function startKeyboard(language: string) {
   return { inline_keyboard: rows };
 }
 
+/** Over-quota upsell keyboard: one-tap into the Mini App to upgrade, plus the
+ * usual quick actions. Falls back to quick actions only when no Mini App URL. */
+export function upgradeKeyboard(language: string) {
+  const url = config.telegram.miniAppUrl;
+  const rows: Array<Array<{ text: string; web_app?: { url: string }; callback_data?: string }>> = [];
+  if (url) {
+    rows.push([{ text: t(language, 'upgradeButton'), web_app: { url } }]);
+  }
+  rows.push([
+    { text: t(language, 'btnDashboard'), callback_data: 'cmd:dashboard' },
+    { text: t(language, 'btnHelp'), callback_data: 'cmd:help' },
+  ]);
+  return { inline_keyboard: rows };
+}
+
 export function helpKeyboard(language: string) {
   const url = config.telegram.miniAppUrl;
   if (!url) return undefined;

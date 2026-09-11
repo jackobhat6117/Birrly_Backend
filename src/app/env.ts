@@ -42,7 +42,7 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default(''),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
-  AI_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
+  AI_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
   // Off by default. Captures parsed AI commands + their confirmed/corrected
   // outcome as labeled data. Enable ONLY with user consent + a retention policy
   // (see docs/adr/002-ai-native-data-flywheel.md) — payloads carry personal data.
