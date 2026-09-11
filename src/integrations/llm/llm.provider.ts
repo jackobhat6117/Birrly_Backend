@@ -34,7 +34,7 @@ export type LlmProviderConfig = {
   model: string;
 };
 
-const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash';
+const DEFAULT_GEMINI_MODEL = 'gemini-3.6-flash';
 
 export function createLlmProvider(config: LlmProviderConfig): LLMProvider {
   const apiKey = config.apiKey.trim();

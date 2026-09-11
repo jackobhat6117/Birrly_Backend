@@ -19,7 +19,7 @@ const envSchema = z.object({
   TELEGRAM_BOT_USERNAME: z.string().default(''),
   LLM_API_KEY: z.string().default(''),
   LLM_PROVIDER: z.enum(['disabled', 'gemini', 'openai', 'anthropic']).default('gemini'),
-  LLM_MODEL: z.string().default('gemini-2.0-flash'),
+  LLM_MODEL: z.string().default('gemini-3.6-flash'),
   DEV_AUTH_ENABLED: z
     .string()
     .default('false')

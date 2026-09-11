@@ -15,6 +15,27 @@ const server = app.listen(env.PORT, () => {
   void bootstrapTelegramBot().catch((error: unknown) => {
     logger.error({ err: error }, 'Telegram bootstrap failed');
   });
+  // Liveness probe: one real LLM call on boot so the logs say plainly whether AI
+  // chat is actually working (not just configured). A failure here is why users
+  // would fall back to the rule parser — surfaced instead of hidden.
+  void container.aiHealthService
+    .probe()
+    .then((result) => {
+      if (result.ok) {
+        logger.info(
+          { provider: result.provider, model: result.model, latencyMs: result.latencyMs },
+          '✅ LLM alive — AI natural-language chat is ON',
+        );
+      } else {
+        logger.warn(
+          { provider: result.provider, model: result.model, enabled: result.enabled, error: result.error },
+          '⚠️ LLM NOT alive — running rule-based parser only (users will not get AI chat)',
+        );
+      }
+    })
+    .catch((error: unknown) => {
+      logger.warn({ err: error }, 'LLM startup probe failed');
+    });
 });
 
 const shutdown = async (signal: string) => {

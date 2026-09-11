@@ -3,7 +3,7 @@ import type { ParseTextInput, StructuredCommand } from '@/modules/ai/ai.types';
 import { SYSTEM_CATEGORIES } from '@/shared/constants/categories';
 import type { LLMProvider } from '@/integrations/llm/llm.provider';
 
-const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash';
+const DEFAULT_GEMINI_MODEL = 'gemini-3.6-flash';
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
 type GeminiGenerateResponse = {

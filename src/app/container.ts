@@ -201,6 +201,7 @@ export function createContainer() {
     subscriptionService,
     analyticsService,
     adminService,
+    aiHealthService,
     feedbackService,
     userController: new UserController(userService, subscriptionService),
     subscriptionController: new SubscriptionController(subscriptionService),

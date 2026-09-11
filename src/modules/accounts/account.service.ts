@@ -20,10 +20,16 @@ export class AccountService {
     if (accountId) {
       return this.getOwned(accountId, userId);
     }
-    const fallback = await this.accounts.findDefaultForUser(userId);
-    if (!fallback) {
-      throw new NotFoundError(ERROR_CODE.ACCOUNT_NOT_FOUND, 'No default account was found.');
+    const preferred = await this.accounts.findDefaultForUser(userId);
+    if (preferred) {
+      return preferred;
     }
-    return fallback;
+    // No account is flagged default (data drift, archived default, etc.). Fall
+    // back to any usable account rather than failing the core logging path.
+    const [firstAvailable] = await this.accounts.listForUser(userId);
+    if (!firstAvailable) {
+      throw new NotFoundError(ERROR_CODE.ACCOUNT_NOT_FOUND, 'No account was found for this user.');
+    }
+    return firstAvailable;
   }
 }
