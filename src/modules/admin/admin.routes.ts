@@ -28,6 +28,13 @@ export function adminRoutes(controller: AdminController): Router {
   );
 
   router.use(adminAuth);
+  // Live LLM diagnostic. GET /ai/health for config status; ?probe=true makes one
+  // real call (rate-limited, since it costs a token).
+  router.get(
+    '/ai/health',
+    rateLimit({ prefix: 'admin-ai-health', max: 20 }),
+    controller.aiHealthCheck,
+  );
   router.get('/overview', controller.overview);
   router.get('/activity', controller.activity);
   router.get('/funnel', controller.funnel);

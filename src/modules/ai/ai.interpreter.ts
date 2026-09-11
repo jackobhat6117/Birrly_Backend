@@ -2,6 +2,7 @@ import type { LLMProvider } from '@/integrations/llm/llm.provider';
 import { structuredCommandSchema } from '@/modules/ai/ai.schema';
 import type { ParseTextInput, StructuredCommand } from '@/modules/ai/ai.types';
 import { parseWithFallback } from '@/modules/ai/parsers/fallback-parser';
+import { logger } from '@/shared/logger/logger';
 
 export class AiInterpreter {
   constructor(private readonly llmProvider: LLMProvider) {}
@@ -24,7 +25,14 @@ export class AiInterpreter {
           return fallbackValidated;
         }
         return validated;
-      } catch {
+      } catch (error) {
+        // Never silent: a rejected key, unreachable provider, or bad LLM JSON
+        // used to look identical to "AI off". Log it so operators can see the
+        // real reason the bot is running on the rule-based parser.
+        logger.warn(
+          { err: error, language: input.language },
+          'LLM parse failed; falling back to rule-based parser',
+        );
         const fallback = parseWithFallback(input);
         return structuredCommandSchema.parse(fallback);
       }

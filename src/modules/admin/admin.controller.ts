@@ -13,9 +13,23 @@ import {
   upgradeRequestIdSchema,
 } from '@/modules/admin/admin.schema';
 import type { AdminService } from '@/modules/admin/admin.service';
+import type { AiHealthService } from '@/modules/ai/ai-health.service';
 
 export class AdminController {
-  constructor(private readonly admin: AdminService) {}
+  constructor(
+    private readonly admin: AdminService,
+    private readonly aiHealth: AiHealthService,
+  ) {}
+
+  /**
+   * "Is the LLM actually running?" — config status by default; `?probe=true`
+   * makes one real call so a rejected key surfaces as ok:false with the error.
+   */
+  aiHealthCheck = asyncHandler(async (req: Request, res: Response) => {
+    const probe = req.query.probe === 'true';
+    const data = probe ? await this.aiHealth.probe() : this.aiHealth.status();
+    res.json({ data });
+  });
 
   login = asyncHandler(async (req: Request, res: Response) => {
     const input = adminLoginSchema.parse(req.body);

@@ -18,6 +18,7 @@ import { AiInteractionRepository } from '@/modules/ai/ai-interaction.repository'
 import { AiInteractionService } from '@/modules/ai/ai-interaction.service';
 import { UserContextRepository } from '@/modules/ai/user-context/user-context.repository';
 import { UserContextService } from '@/modules/ai/user-context/user-context.service';
+import { AiHealthService } from '@/modules/ai/ai-health.service';
 import { AuditService } from '@/modules/audit/audit.service';
 import { CategoryController } from '@/modules/categories/category.controller';
 import { CategoryRepository } from '@/modules/categories/category.repository';
@@ -126,6 +127,10 @@ export function createContainer() {
   const adminService = new AdminService(prisma, feedbackRepository, subscriptionService);
   const feedbackService = new FeedbackService(feedbackRepository);
   const llmProvider = createLlmProvider(config.llm);
+  const aiHealthService = new AiHealthService(llmProvider, {
+    provider: config.llm.provider,
+    model: config.llm.model,
+  });
   const reportInsightService = new ReportInsightService(
     prisma,
     subscriptionService,
@@ -209,7 +214,7 @@ export function createContainer() {
     budgetController: new BudgetController(budgetService),
     savingsController: new SavingsController(savingsService),
     analyticsController: new AnalyticsController(analyticsService),
-    adminController: new AdminController(adminService),
+    adminController: new AdminController(adminService, aiHealthService),
     authController: new AuthController(userService),
     testController: new TestController(),
     feedbackController: new FeedbackController(feedbackService),
