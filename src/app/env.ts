@@ -30,6 +30,16 @@ const envSchema = z.object({
     .string()
     .default('false')
     .transform((value) => value === 'true'),
+  // Proactive monthly digest: pushes each premium user last month's report +
+  // AI coach highlight to their Telegram chat via a scheduled BullMQ job.
+  // Off by default; the worker only registers the schedule when this is true.
+  MONTHLY_DIGEST_ENABLED: z
+    .string()
+    .default('false')
+    .transform((value) => value === 'true'),
+  // Cron for the fan-out that enqueues per-user digests. Default: 08:00 on the
+  // 1st of each month (so it covers the just-completed month).
+  MONTHLY_DIGEST_CRON: z.string().default('0 8 1 * *'),
   RUN_DEMO_SEED: z
     .string()
     .default('false')

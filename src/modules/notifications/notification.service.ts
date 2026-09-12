@@ -9,12 +9,17 @@ export class NotificationService {
     private readonly telegram: TelegramBotAdapter,
   ) {}
 
-  async notifyTelegram(userId: string, title: string, body: string, reminderId?: string): Promise<void> {
+  async notifyTelegram(
+    userId: string,
+    title: string,
+    body: string,
+    options: { reminderId?: string; parseMode?: 'HTML' | 'MarkdownV2'; replyMarkup?: unknown } = {},
+  ): Promise<void> {
     const notification = await this.notifications.create({
       userId,
       title,
       body,
-      reminderId,
+      reminderId: options.reminderId,
     });
 
     const user = await this.users.findById(userId);
@@ -27,6 +32,8 @@ export class NotificationService {
       await this.telegram.sendMessage({
         chatId: user.telegramId,
         text: `${title}\n${body}`,
+        parseMode: options.parseMode,
+        replyMarkup: options.replyMarkup,
       });
       await this.notifications.markSent(notification.id);
     } catch (error) {

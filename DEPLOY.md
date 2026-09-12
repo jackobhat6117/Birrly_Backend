@@ -158,7 +158,37 @@ docker compose -f docker-compose.prod.yml down
 docker compose -f docker-compose.prod.yml down -v
 ```
 
-## 8. Backups (important)
+## 8. Scheduled jobs (worker)
+
+All background work runs in the **worker** container (BullMQ + Redis) — the API
+process never sends proactive messages. If the worker is down, nothing below
+happens, so keep it running and watch its logs.
+
+| Job | Trigger | What it does |
+|---|---|---|
+| Reminders | User-scheduled, per reminder | Sends the reminder to the user's Telegram chat, then reschedules if recurring. |
+| Monthly digest | Cron (`MONTHLY_DIGEST_CRON`, default `0 8 1 * *`) | On the 1st of each month, DMs every **active premium** user last month's report figures + AI coach highlight. |
+
+The monthly digest is **off by default**. To enable it in production, set in `.env`:
+
+```bash
+MONTHLY_DIGEST_ENABLED=true
+MONTHLY_DIGEST_CRON=0 8 1 * *   # 08:00 on the 1st; cron is evaluated in the app's default timezone
+```
+
+Notes:
+
+- The schedule is registered **idempotently on worker boot** — no separate cron
+  daemon, no duplicate schedules across restarts. Setting the flag back to
+  `false` and restarting the worker removes the schedule.
+- The digest's figures are always sent; the AI coach / insight narration is
+  best-effort and is simply omitted if the LLM is disabled or over quota (see
+  the startup `LLM alive` probe in the API logs).
+- A user with **no activity** in the target month is skipped (no empty digests).
+- Verify without waiting for the 1st (OAT only): `POST /api/v1/test/digest` with
+  header `x-test-secret` and body `{"telegramId":"...","send":true}`.
+
+## 9. Backups (important)
 
 Postgres data lives in Docker volume `pfa_pgdata`. Back up regularly:
 
@@ -182,4 +212,5 @@ docker compose -f docker-compose.prod.yml exec -T postgres \
 | `/ready` fails | Postgres or Redis not healthy: `docker compose ... ps` |
 | Telegram webhook fails | HTTPS required; `DOMAIN` DNS must point to VPS; ports 80/443 open |
 | Reminders not sent | Worker running? `docker compose ... logs worker` |
+| Monthly digest not sent | `MONTHLY_DIGEST_ENABLED=true`? Worker running? Look for `Monthly digest schedule registered` in worker logs. Users must be active premium with activity last month. |
 | `ADMIN_JWT_SECRET` error | Must not be the dev default in production |

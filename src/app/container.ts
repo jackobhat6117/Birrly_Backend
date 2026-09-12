@@ -19,6 +19,8 @@ import { AiInteractionService } from '@/modules/ai/ai-interaction.service';
 import { UserContextRepository } from '@/modules/ai/user-context/user-context.repository';
 import { UserContextService } from '@/modules/ai/user-context/user-context.service';
 import { AiHealthService } from '@/modules/ai/ai-health.service';
+import { DigestRepository } from '@/modules/digest/digest.repository';
+import { DigestService } from '@/modules/digest/digest.service';
 import { AuditService } from '@/modules/audit/audit.service';
 import { CategoryController } from '@/modules/categories/category.controller';
 import { CategoryRepository } from '@/modules/categories/category.repository';
@@ -150,6 +152,14 @@ export function createContainer() {
     coachRepository,
     llmProvider,
   );
+  const digestRepository = new DigestRepository(prisma);
+  const digestService = new DigestService(
+    userService,
+    reportService,
+    reportInsightService,
+    coachService,
+    digestRepository,
+  );
   const interpreter = new AiInterpreter(llmProvider);
   const aiUsage = new AiUsageService(redis, config.ai.dailyLimit);
   const userContextRepository = new UserContextRepository(prisma);
@@ -196,6 +206,7 @@ export function createContainer() {
     notificationService,
     reportService,
     coachService,
+    digestService,
     budgetService,
     savingsService,
     subscriptionService,
@@ -218,7 +229,7 @@ export function createContainer() {
     analyticsController: new AnalyticsController(analyticsService),
     adminController: new AdminController(adminService, aiHealthService),
     authController: new AuthController(userService),
-    testController: new TestController(),
+    testController: new TestController(digestService, notificationService, userRepository),
     feedbackController: new FeedbackController(feedbackService),
     telegramWebhookController: new TelegramWebhookController(telegramHandler, telegramIdempotency),
   };

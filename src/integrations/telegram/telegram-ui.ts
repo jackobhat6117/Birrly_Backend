@@ -182,6 +182,23 @@ export function upgradeKeyboard(language: string) {
   return { inline_keyboard: rows };
 }
 
+/**
+ * Renders a fired reminder into a localized Telegram message (title + HTML body).
+ * The reminder's own title/notes are user-authored, so both are escaped. This is
+ * the only place a reminder becomes a Telegram string — the domain never formats.
+ */
+export function formatReminderMessage(
+  language: string,
+  title: string,
+  notes?: string | null,
+): { title: string; body: string } {
+  const lines = [`<b>${escapeHtml(title)}</b>`];
+  if (notes && notes.trim()) {
+    lines.push(escapeHtml(notes.trim()));
+  }
+  return { title: t(language, 'reminderNotificationTitle'), body: lines.join('\n') };
+}
+
 export function helpKeyboard(language: string) {
   const url = config.telegram.miniAppUrl;
   if (!url) return undefined;

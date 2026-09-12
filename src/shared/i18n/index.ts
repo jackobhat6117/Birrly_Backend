@@ -60,7 +60,13 @@ export type MessageKey =
   | 'coachUnavailable'
   | 'coachScore'
   | 'coachRecurring'
-  | 'coachDisclaimer';
+  | 'coachDisclaimer'
+  | 'digestTitle'
+  | 'digestFigures'
+  | 'digestHighlights'
+  | 'digestCoachTip'
+  | 'digestFooter'
+  | 'reminderNotificationTitle';
 
 const en: Record<MessageKey, string> = {
   welcome:
@@ -135,6 +141,13 @@ const en: Record<MessageKey, string> = {
   coachScore: '📊 Health score: <b>{score}</b>/100',
   coachRecurring: '🔁 Recurring / year: <b>{amount} {currency}</b>',
   coachDisclaimer: 'A look at your own logged spending — not financial advice.',
+  digestTitle: '📊 <b>Your monthly summary</b> · {period}',
+  digestFigures:
+    '💰 Income <code>{income} {currency}</code>\n💸 Expenses <code>{expenses} {currency}</code>\n✨ Saved <code>{savings} {currency}</code> ({rate}%)',
+  digestHighlights: '\n<b>Highlights</b>',
+  digestCoachTip: '\n💡 {tip}',
+  digestFooter: '\nOpen Birrly for the full report.',
+  reminderNotificationTitle: '⏰ <b>Reminder</b>',
 };
 
 const am: Record<MessageKey, string> = {
@@ -207,6 +220,13 @@ const am: Record<MessageKey, string> = {
   coachScore: '📊 የጤና ነጥብ: <b>{score}</b>/100',
   coachRecurring: '🔁 ተደጋጋሚ / ዓመት: <b>{amount} {currency}</b>',
   coachDisclaimer: 'የራስዎን የወጪ መዝገብ ዕይታ ነው — የገንዘብ ምክር አይደለም።',
+  digestTitle: '📊 <b>የወርሃዊ ማጠቃለያ</b> · {period}',
+  digestFigures:
+    '💰 ገቢ <code>{income} {currency}</code>\n💸 ወጪ <code>{expenses} {currency}</code>\n✨ ቁጠባ <code>{savings} {currency}</code> ({rate}%)',
+  digestHighlights: '\n<b>ዋና ነጥቦች</b>',
+  digestCoachTip: '\n💡 {tip}',
+  digestFooter: '\nሙሉ ሪፖርት ለማየት ቢርሊ ይክፈቱ።',
+  reminderNotificationTitle: '⏰ <b>ማስታወሻ</b>',
 };
 
 const catalogs: Record<string, Record<MessageKey, string>> = { en, am };

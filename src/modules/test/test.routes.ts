@@ -10,5 +10,10 @@ export function testRoutes(controller: TestController): Router {
     rateLimit({ prefix: 'test-reset-demo', max: 5 }),
     controller.resetDemo,
   );
+  router.post(
+    '/digest',
+    rateLimit({ prefix: 'test-digest', max: 20 }),
+    controller.triggerDigest,
+  );
   return router;
 }

@@ -7,6 +7,14 @@ export const config = {
   isOat: env.APP_PROFILE === 'oat',
   features: {
     equbEnabled: env.EQUB_ENABLED,
+    monthlyDigestEnabled: env.MONTHLY_DIGEST_ENABLED,
+  },
+  jobs: {
+    monthlyDigest: {
+      enabled: env.MONTHLY_DIGEST_ENABLED,
+      cron: env.MONTHLY_DIGEST_CRON,
+      timezone: DEFAULT_TIMEZONE,
+    },
   },
   isProduction: env.NODE_ENV === 'production',
   isDevelopment: env.NODE_ENV === 'development',
