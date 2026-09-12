@@ -599,6 +599,7 @@ export class TelegramUpdateHandler {
         amount: command.amount ?? '0',
       });
       return t(user.language, 'recordedDebt', {
+        direction: this.debtDirectionLabel(user, saved.type),
         person: escapeHtml(saved.personName),
         amount: escapeHtml(saved.originalAmount),
         currency: escapeHtml(saved.currency),
@@ -669,7 +670,11 @@ export class TelegramUpdateHandler {
     if (command.intent === 'QUERY_DEBT') {
       const debts = await this.debts.list(user.id);
       const open = debts.filter((debt) => debt.status !== 'SETTLED');
-      const lines = open.map((debt) => `${debt.personName}: ${debt.remainingAmount} ${debt.currency}`);
+      const lines = open.map((debt) => {
+        const mark = debt.type === 'I_OWE' ? '🔴' : '🟢';
+        const direction = this.debtDirectionLabel(user, debt.type);
+        return `${mark} ${direction} — ${debt.personName}: ${debt.remainingAmount} ${debt.currency}`;
+      });
       await this.telegram.sendMessage({
         chatId,
         text: formatDebtsMessage(user, lines),
@@ -717,6 +722,11 @@ export class TelegramUpdateHandler {
     );
   }
 
+  /** Plain-language direction label: OWED_TO_ME → "You lent", I_OWE → "You borrowed". */
+  private debtDirectionLabel(user: AuthenticatedUser, type: 'OWED_TO_ME' | 'I_OWE'): string {
+    return t(user.language, type === 'I_OWE' ? 'debtBorrowed' : 'debtLent');
+  }
+
   private confirmText(user: AuthenticatedUser, command: StructuredCommand): string {
     const amount = command.amount ? formatMoney(command.amount) : '';
     if (command.intent === 'CREATE_EXPENSE') {
@@ -735,6 +745,7 @@ export class TelegramUpdateHandler {
     }
     if (command.intent === 'CREATE_DEBT') {
       return htmlConfirmText(user, 'confirmDebt', {
+        direction: this.debtDirectionLabel(user, command.debtType ?? 'OWED_TO_ME'),
         person: command.personName ?? '',
         amount,
         currency: user.currency,

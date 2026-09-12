@@ -66,7 +66,9 @@ export type MessageKey =
   | 'digestHighlights'
   | 'digestCoachTip'
   | 'digestFooter'
-  | 'reminderNotificationTitle';
+  | 'reminderNotificationTitle'
+  | 'debtLent'
+  | 'debtBorrowed';
 
 const en: Record<MessageKey, string> = {
   welcome:
@@ -82,22 +84,22 @@ const en: Record<MessageKey, string> = {
   wellbeingReply:
     'Doing well, thanks for asking! 🙂\n\nI am Birrly — your finance helper. Ask <code>how much money is left</code>, log <code>80 taxi</code>, or tap a button below.',
   thanksReply: 'You are welcome! 🙂 Need anything else? Try <code>/dashboard</code> or log a quick expense.',
-  debtsTitle: '<b>Open debts</b>',
-  debtsEmpty: '<b>Open debts</b>\n\nNone right now. 🎉',
+  debtsTitle: '<b>Lent &amp; borrowed</b>',
+  debtsEmpty: '<b>Lent &amp; borrowed</b>\n\nNothing outstanding right now. 🎉',
   askCategory: 'What did you spend the <code>{amount} {currency}</code> on?\n\nExample: <code>350 food</code>',
   askAmount: 'How much should I record?',
   askPerson: 'Who is this debt with?',
   askDate: 'Which date should I use?',
   confirmExpense: '💸 Record <code>{amount} {currency}</code> for <b>{category}</b>?',
   confirmIncome: '💰 Record <code>{amount} {currency}</code> income as <b>{category}</b>?',
-  confirmDebt: '📒 <b>{person}</b> — <code>{amount} {currency}</code>\n\nSave this debt?',
+  confirmDebt: '📒 <b>{direction}</b>\n{person} — <code>{amount} {currency}</code>\n\nSave this?',
   confirmReminder: '⏰ Remind you: <b>{title}</b>\n📅 {date}',
   confirmBudget: '📊 Set <b>{category}</b> budget to <code>{amount} {currency}</code> this month?',
   confirmSavingsGoal: '🎯 Savings goal <b>{goal}</b> — target <code>{amount} {currency}</code>?',
   confirmDebtPayment: '💳 Record <code>{amount} {currency}</code> payment from <b>{person}</b>?',
   recordedExpense: '✓ <code>{amount} {currency}</code> for {category} recorded.',
   recordedIncome: '✓ <code>{amount} {currency}</code> income recorded.',
-  recordedDebt: '✓ Debt with <b>{person}</b> for <code>{amount} {currency}</code> saved.',
+  recordedDebt: '✓ {direction}: <b>{person}</b> — <code>{amount} {currency}</code> saved.',
   recordedReminder: '✓ Reminder saved.',
   recordedBudget: '✓ <b>{category}</b> budget set to <code>{amount} {currency}</code>.',
   recordedSavingsGoal: '✓ Savings goal <b>{goal}</b> — <code>{amount} {currency}</code> target saved.',
@@ -148,6 +150,8 @@ const en: Record<MessageKey, string> = {
   digestCoachTip: '\n💡 {tip}',
   digestFooter: '\nOpen Birrly for the full report.',
   reminderNotificationTitle: '⏰ <b>Reminder</b>',
+  debtLent: 'You lent',
+  debtBorrowed: 'You borrowed',
 };
 
 const am: Record<MessageKey, string> = {
@@ -164,22 +168,22 @@ const am: Record<MessageKey, string> = {
   wellbeingReply:
     'በጣም ደህና ነኝ — አመሰግናለሁ! 🙂\n\nእኔ ቢርሊ ነኝ። <code>how much money is left</code> ይጠይቁ ወይም <code>80 taxi</code> ይጻፉ።',
   thanksReply: 'አይደለም! 🙂 ሌላ ነገር ከፈለጉ <code>/dashboard</code> ይሞክሩ።',
-  debtsTitle: '<b>ክፍት ዕዳዎች</b>',
-  debtsEmpty: '<b>ክፍት ዕዳዎች</b>\n\nአሁን የለም። 🎉',
+  debtsTitle: '<b>ያበደሩት እና የተበደሩት</b>',
+  debtsEmpty: '<b>ያበደሩት እና የተበደሩት</b>\n\nአሁን ምንም የለም። 🎉',
   askCategory: '<code>{amount} {currency}</code> ለምን አወጡ?\n\nለምሳሌ፦ <code>350 food</code>',
   askAmount: 'ምን ያህል ልመዘግብ?',
   askPerson: 'ዕዳው ከማን ጋር ነው?',
   askDate: 'የትኛውን ቀን ልጠቀም?',
   confirmExpense: '💸 <code>{amount} {currency}</code> ለ<b>{category}</b> ይመዘገብ?',
   confirmIncome: '💰 <code>{amount} {currency}</code> ገቢ ለ<b>{category}</b> ይመዘገብ?',
-  confirmDebt: '📒 <b>{person}</b> — <code>{amount} {currency}</code>\n\nይቀመጥ?',
+  confirmDebt: '📒 <b>{direction}</b>\n{person} — <code>{amount} {currency}</code>\n\nይቀመጥ?',
   confirmReminder: '⏰ <b>{title}</b>\n📅 {date}',
   confirmBudget: '📊 <b>{category}</b> በዚህ ወር <code>{amount} {currency}</code> ባጀት?',
   confirmSavingsGoal: '🎯 <b>{goal}</b> — <code>{amount} {currency}</code> ቁሳች?',
   confirmDebtPayment: '💳 ከ<b>{person}</b> <code>{amount} {currency}</code> ክፍያ ይመዘገብ?',
   recordedExpense: '✓ <code>{amount} {currency}</code> {category} ተመዝግቧል።',
   recordedIncome: '✓ <code>{amount} {currency}</code> ገቢ ተመዝግቧል።',
-  recordedDebt: '✓ ከ<b>{person}</b> ጋር <code>{amount} {currency}</code> ዕዳ ተቀምጧል።',
+  recordedDebt: '✓ {direction}: <b>{person}</b> — <code>{amount} {currency}</code> ተቀምጧል።',
   recordedReminder: '✓ ማስታወሻ ተቀምጧል።',
   recordedBudget: '✓ <b>{category}</b> ባጀት <code>{amount} {currency}</code> ተሰናይቷል።',
   recordedSavingsGoal: '✓ <b>{goal}</b> ቁሳች <code>{amount} {currency}</code> ተቀምጧል።',
@@ -227,6 +231,8 @@ const am: Record<MessageKey, string> = {
   digestCoachTip: '\n💡 {tip}',
   digestFooter: '\nሙሉ ሪፖርት ለማየት ቢርሊ ይክፈቱ።',
   reminderNotificationTitle: '⏰ <b>ማስታወሻ</b>',
+  debtLent: 'ያበደሩት',
+  debtBorrowed: 'የተበደሩት',
 };
 
 const catalogs: Record<string, Record<MessageKey, string>> = { en, am };

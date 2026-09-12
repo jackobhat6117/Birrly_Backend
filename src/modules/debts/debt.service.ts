@@ -137,8 +137,9 @@ export class DebtService {
 
   /**
    * Records that the user opened Telegram's share sheet to nudge someone about
-   * this debt. There is no captured Telegram identity for the other side of an
-   * IOU, so this cannot confirm delivery — it only timestamps the attempt, so
+   * this debt. There is no captured Telegram identity for the other side of a
+   * lent/borrowed record, so this cannot confirm delivery — it only timestamps
+   * the attempt, so
    * the Mini App can show "Nudged 2 days ago" instead of leaving the user to
    * guess whether they already asked.
    */

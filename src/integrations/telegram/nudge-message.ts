@@ -115,7 +115,7 @@ function detectTopic(text: string): NudgeTopic {
   if (/save|saving|goal|ቁሳች/.test(lower + text)) {
     return 'savings';
   }
-  if (/debt|owe|owes|paid|iou|loan|ዕዳ|ክፍ/.test(lower + text)) {
+  if (/debt|owe|owes|paid|lent|lend|borrow|loan|ዕዳ|ክፍ/.test(lower + text)) {
     return 'debt';
   }
   if (/salary|income|earn|received|paid me|ደመወዝ|ገቢ/.test(lower + text)) {
