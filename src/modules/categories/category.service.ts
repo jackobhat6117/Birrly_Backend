@@ -48,6 +48,49 @@ export class CategoryService {
     }
   }
 
+  async findBySlug(userId: string, slug: string, type: TransactionType) {
+    return this.categories.findBySlug(slug, userId, type);
+  }
+
+  /**
+   * Returns the category for this slug, creating a personal one when the user
+   * has never had it (new account, system list not seeded).
+   */
+  async ensureBySlug(
+    userId: string,
+    input: { name: string; slug: string; kind: CategoryKind },
+  ) {
+    const type: TransactionType = input.kind === 'INCOME' ? 'INCOME' : 'EXPENSE';
+    const existing = await this.categories.findBySlug(input.slug, userId, type);
+    if (existing) return existing;
+
+    try {
+      const created = await this.categories.create({
+        userId,
+        name: input.name,
+        slug: input.slug,
+        kind: input.kind,
+      });
+      await this.audit.record({
+        userId,
+        action: 'CATEGORY_CREATED',
+        entityType: 'category',
+        entityId: created.id,
+        metadata: { slug: input.slug, kind: created.kind },
+      });
+      return created;
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const raced = await this.categories.findBySlug(input.slug, userId, type);
+        if (raced) return raced;
+      }
+      throw error;
+    }
+  }
+
   async resolve(userId: string, input: { categoryId?: string; categorySlug?: string }, type: TransactionType) {
     if (input.categoryId) {
       const category = await this.categories.findByIdForUser(input.categoryId, userId);

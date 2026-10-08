@@ -37,6 +37,7 @@ import {
 } from '@/integrations/telegram/telegram-ui';
 import { buildHelpfulNudge } from '@/integrations/telegram/nudge-message';
 import { openMiniAppKeyboard } from '@/integrations/telegram/telegram-bootstrap';
+import { categoryLabel } from '@/shared/constants/categories';
 import { AppError, ERROR_CODE } from '@/shared/errors/app-error';
 import { t } from '@/shared/i18n';
 import { logger } from '@/shared/logger/logger';
@@ -95,7 +96,14 @@ export class TelegramUpdateHandler {
         return;
       }
 
-      await this.handleNaturalLanguage(message.chat.id, user, message.text.trim());
+      const text = message.text.trim();
+      const pending = await this.conversations.get(user.id);
+      if (pending?.awaiting === 'monthlyIncome') {
+        const captured = await this.captureOnboardingIncome(message.chat.id, user, text);
+        if (captured) return;
+      }
+
+      await this.handleNaturalLanguage(message.chat.id, user, text);
     } catch (error) {
       logger.error({ err: error, updateId: update.update_id, chatId }, 'Telegram handler failed');
       if (chatId) {
@@ -298,6 +306,7 @@ export class TelegramUpdateHandler {
       }
     }
 
+    const ready = await this.offerMissingCategory(user.id, command);
     const token = randomBytes(6).toString('hex');
     // Best-effort label capture (no-op unless AI_TRAINING_CAPTURE is on): remember
     // what we predicted so we can score it against what the user confirms below.
@@ -305,19 +314,19 @@ export class TelegramUpdateHandler {
       userId: user.id,
       inputText: text,
       language: user.language,
-      command,
+      command: ready,
       usedLlm: parsed.usedLlm,
     });
     await this.conversations.save(user.id, {
       token,
-      command,
+      command: ready,
       createdAt: new Date().toISOString(),
       aiInteractionId: aiInteractionId ?? undefined,
     });
 
     await this.telegram.sendMessage({
       chatId,
-      text: this.confirmText(user, command),
+      text: this.confirmText(user, ready),
       parseMode: 'HTML',
       replyMarkup: confirmKeyboard(user.language, token),
     });
@@ -365,6 +374,81 @@ export class TelegramUpdateHandler {
       parseMode: 'HTML',
       replyMarkup: startKeyboard(user.language),
     });
+
+    if (!user.monthlyIncome) {
+      await this.askMonthlyIncome(chatId, user);
+    }
+  }
+
+  private async askMonthlyIncome(chatId: number, user: AuthenticatedUser): Promise<void> {
+    await this.conversations.save(user.id, {
+      token: randomBytes(6).toString('hex'),
+      command: {
+        intent: 'UNKNOWN',
+        confidence: 0,
+        missingFields: [],
+        source: 'fallback',
+      },
+      createdAt: new Date().toISOString(),
+      awaiting: 'monthlyIncome',
+    });
+    await this.telegram.sendMessage({
+      chatId,
+      text: t(user.language, 'askMonthlyIncome'),
+      parseMode: 'HTML',
+      replyMarkup: {
+        inline_keyboard: [[{ text: t(user.language, 'skipIncomeButton'), callback_data: 'income:skip' }]],
+      },
+    });
+  }
+
+  /**
+   * Returns true when the message was an income answer (or a prompt to retry).
+   * A normal expense like "80 taxi" returns false so logging still works.
+   */
+  private async captureOnboardingIncome(
+    chatId: number,
+    user: AuthenticatedUser,
+    text: string,
+  ): Promise<boolean> {
+    const amount = parseOnboardingIncomeAmount(text);
+    if (!amount) {
+      if (/^\d/.test(text)) {
+        await this.telegram.sendMessage({
+          chatId,
+          text: t(user.language, 'incomeNeedAmount'),
+          parseMode: 'HTML',
+        });
+        return true;
+      }
+      return false;
+    }
+
+    const command: StructuredCommand = {
+      intent: 'CREATE_INCOME',
+      amount,
+      currency: user.currency,
+      categorySlug: 'salary',
+      description: 'Salary',
+      confidence: 1,
+      missingFields: [],
+      source: 'fallback',
+      setMonthlyIncome: true,
+    };
+    const ready = await this.offerMissingCategory(user.id, command);
+    const token = randomBytes(6).toString('hex');
+    await this.conversations.save(user.id, {
+      token,
+      command: ready,
+      createdAt: new Date().toISOString(),
+    });
+    await this.telegram.sendMessage({
+      chatId,
+      text: this.confirmText(user, ready),
+      parseMode: 'HTML',
+      replyMarkup: confirmKeyboard(user.language, token),
+    });
+    return true;
   }
 
   private async sendHelp(chatId: number, user: AuthenticatedUser): Promise<void> {
@@ -802,6 +886,20 @@ export class TelegramUpdateHandler {
       languageCode: callback.from.language_code,
     });
 
+    if (callback.data === 'income:skip') {
+      const pending = await this.conversations.get(user.id);
+      if (pending?.awaiting === 'monthlyIncome') {
+        await this.conversations.clear(user.id);
+      }
+      await this.telegram.answerCallbackQuery(callback.id);
+      await this.telegram.sendMessage({
+        chatId: callback.message.chat.id,
+        text: t(user.language, 'incomeSkipped'),
+        parseMode: 'HTML',
+      });
+      return;
+    }
+
     if (callback.data.startsWith('cmd:')) {
       const command = callback.data.slice(4);
       await this.telegram.answerCallbackQuery(callback.id);
@@ -903,23 +1001,32 @@ export class TelegramUpdateHandler {
     const idempotencyKey = `telegram:${confirmationToken}`;
 
     if (command.intent === 'CREATE_EXPENSE' || command.intent === 'CREATE_INCOME') {
+      const type = command.intent === 'CREATE_EXPENSE' ? 'EXPENSE' : 'INCOME';
+      const category = await this.resolveCommandCategory(user.id, command, type);
       const saved = await this.transactions.create(user.id, user.currency, user.timezone, {
-        type: command.intent === 'CREATE_EXPENSE' ? 'EXPENSE' : 'INCOME',
+        type,
         amount: command.amount ?? '0',
-        categorySlug: command.categorySlug,
+        categoryId: category.id,
         description: command.description,
         transactionDate: command.date,
         source: 'TELEGRAM',
         idempotencyKey,
         aiInteractionId,
       });
+      if (command.setMonthlyIncome) {
+        await this.users.updateProfile(user.id, { monthlyIncome: saved.amount });
+      }
       return t(
         user.language,
-        command.intent === 'CREATE_EXPENSE' ? 'recordedExpense' : 'recordedIncome',
+        command.proposedCategoryName
+          ? 'recordedAddedCategory'
+          : command.intent === 'CREATE_EXPENSE'
+            ? 'recordedExpense'
+            : 'recordedIncome',
         {
           amount: escapeHtml(saved.amount),
           currency: escapeHtml(saved.currency),
-          category: escapeHtml(command.categorySlug ?? ''),
+          category: escapeHtml(command.proposedCategoryName ?? command.categorySlug ?? ''),
         },
       );
     }
@@ -957,11 +1064,7 @@ export class TelegramUpdateHandler {
     }
 
     if (command.intent === 'CREATE_BUDGET') {
-      const category = await this.categories.resolve(
-        user.id,
-        { categorySlug: command.categorySlug },
-        'EXPENSE',
-      );
+      const category = await this.resolveCommandCategory(user.id, command, 'EXPENSE');
       const saved = await this.budgets.create(user.id, user.timezone, {
         categoryId: category.id,
         amount: command.amount ?? '0',
@@ -1059,20 +1162,63 @@ export class TelegramUpdateHandler {
     return t(user.language, type === 'I_OWE' ? 'debtBorrowed' : 'debtLent');
   }
 
+  /**
+   * A new user often has no Food/Transport row yet. Ask before saving, instead
+   * of failing confirm with "Category is required."
+   */
+  private async offerMissingCategory(
+    userId: string,
+    command: StructuredCommand,
+  ): Promise<StructuredCommand> {
+    const type =
+      command.intent === 'CREATE_INCOME'
+        ? 'INCOME'
+        : command.intent === 'CREATE_EXPENSE' || command.intent === 'CREATE_BUDGET'
+          ? 'EXPENSE'
+          : null;
+    if (!type || !command.categorySlug || command.proposedCategoryName) {
+      return command;
+    }
+
+    const existing = await this.categories.findBySlug(userId, command.categorySlug, type);
+    if (existing) return command;
+
+    return {
+      ...command,
+      proposedCategoryName: categoryLabel(command.categorySlug, command.description ?? ''),
+    };
+  }
+
+  private async resolveCommandCategory(
+    userId: string,
+    command: StructuredCommand,
+    type: 'EXPENSE' | 'INCOME',
+  ) {
+    if (command.proposedCategoryName && command.categorySlug) {
+      return this.categories.ensureBySlug(userId, {
+        name: command.proposedCategoryName,
+        slug: command.categorySlug,
+        kind: type,
+      });
+    }
+    return this.categories.resolve(userId, { categorySlug: command.categorySlug }, type);
+  }
+
   private confirmText(user: AuthenticatedUser, command: StructuredCommand): string {
     const amount = command.amount ? formatMoney(command.amount) : '';
+    const category = command.proposedCategoryName ?? categoryLabel(command.categorySlug, command.description ?? '');
     if (command.intent === 'CREATE_EXPENSE') {
-      return htmlConfirmText(user, 'confirmExpense', {
+      return htmlConfirmText(user, command.proposedCategoryName ? 'confirmAddCategoryExpense' : 'confirmExpense', {
         amount,
         currency: user.currency,
-        category: command.categorySlug ?? command.description ?? '',
+        category,
       });
     }
     if (command.intent === 'CREATE_INCOME') {
-      return htmlConfirmText(user, 'confirmIncome', {
+      return htmlConfirmText(user, command.proposedCategoryName ? 'confirmAddCategoryIncome' : 'confirmIncome', {
         amount,
         currency: user.currency,
-        category: command.categorySlug ?? '',
+        category,
       });
     }
     if (command.intent === 'CREATE_DEBT') {
@@ -1091,8 +1237,8 @@ export class TelegramUpdateHandler {
       });
     }
     if (command.intent === 'CREATE_BUDGET') {
-      return htmlConfirmText(user, 'confirmBudget', {
-        category: command.categorySlug ?? '',
+      return htmlConfirmText(user, command.proposedCategoryName ? 'confirmAddCategoryBudget' : 'confirmBudget', {
+        category,
         amount,
         currency: user.currency,
       });
@@ -1109,4 +1255,18 @@ export class TelegramUpdateHandler {
       date: command.date ?? '',
     });
   }
+}
+
+/** Amount-only replies to the first-launch income question. Expense phrases stay null. */
+export function parseOnboardingIncomeAmount(text: string): string | null {
+  const match = text
+    .trim()
+    .match(
+      /^(?:salary|income|wage|ደመወዝ)?\s*(\d{1,3}(?:[, ]\d{3})+|\d{1,12})(?:[.,](\d{1,2}))?\s*(?:birr|br|etb|ብር|salary|income|wage|ደመወዝ)?\s*$/i,
+    );
+  if (!match?.[1]) return null;
+  const whole = match[1].replace(/[, ]/g, '');
+  const amount = match[2] ? `${whole}.${match[2]}` : whole;
+  if (Number(amount) <= 0) return null;
+  return amount;
 }

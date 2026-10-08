@@ -8,6 +8,8 @@ export type PendingConversation = {
   createdAt: string;
   /** Id of the AiInteraction row for this parse, to close the label loop on confirm/cancel. */
   aiInteractionId?: string;
+  /** First /start when monthly income is still empty. The next amount reply fills it. */
+  awaiting?: 'monthlyIncome';
 };
 
 export class ConversationStore {

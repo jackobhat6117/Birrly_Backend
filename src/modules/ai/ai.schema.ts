@@ -21,6 +21,8 @@ export const structuredCommandSchema = z.object({
   amount: z.string().optional(),
   currency: z.string().optional(),
   categorySlug: z.string().optional(),
+  proposedCategoryName: z.string().optional(),
+  setMonthlyIncome: z.boolean().optional(),
   description: z.string().optional(),
   date: z.string().optional(),
   personName: z.string().optional(),

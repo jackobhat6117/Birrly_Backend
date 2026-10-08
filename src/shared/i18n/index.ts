@@ -10,9 +10,16 @@ export type MessageKey =
   | 'debtsEmpty'
   | 'askCategory'
   | 'askAmount'
+  | 'askMonthlyIncome'
+  | 'skipIncomeButton'
+  | 'incomeSkipped'
+  | 'incomeNeedAmount'
   | 'askPerson'
   | 'askDate'
   | 'confirmExpense'
+  | 'confirmAddCategoryExpense'
+  | 'confirmAddCategoryIncome'
+  | 'confirmAddCategoryBudget'
   | 'confirmIncome'
   | 'confirmDebt'
   | 'confirmReminder'
@@ -20,6 +27,7 @@ export type MessageKey =
   | 'confirmSavingsGoal'
   | 'confirmDebtPayment'
   | 'recordedExpense'
+  | 'recordedAddedCategory'
   | 'recordedIncome'
   | 'recordedDebt'
   | 'recordedReminder'
@@ -98,9 +106,20 @@ const en: Record<MessageKey, string> = {
   debtsEmpty: '<b>Lent &amp; borrowed</b>\n\nNothing outstanding right now. 🎉',
   askCategory: 'What did you spend the <code>{amount} {currency}</code> on?\n\nExample: <code>350 food</code>',
   askAmount: 'How much should I record?',
+  askMonthlyIncome:
+    'What is your monthly income?\n\nReply with the amount, for example <code>40000</code>. I will save it as your salary so you can see what is left.',
+  skipIncomeButton: 'Skip for now',
+  incomeSkipped: 'No problem. Add it later by sending <code>40000 salary</code>.',
+  incomeNeedAmount: 'Send the amount, like <code>40000</code>, or tap Skip.',
   askPerson: 'Who is this debt with?',
   askDate: 'Which date should I use?',
   confirmExpense: '💸 Record <code>{amount} {currency}</code> for <b>{category}</b>?',
+  confirmAddCategoryExpense:
+    '🗂️ <b>{category}</b> isn\'t a category yet. Add it and record <code>{amount} {currency}</code>?',
+  confirmAddCategoryIncome:
+    '🗂️ <b>{category}</b> isn\'t a category yet. Add it and record <code>{amount} {currency}</code> as income?',
+  confirmAddCategoryBudget:
+    '🗂️ <b>{category}</b> isn\'t a category yet. Add it and set a <code>{amount} {currency}</code> budget?',
   confirmIncome: '💰 Record <code>{amount} {currency}</code> income as <b>{category}</b>?',
   confirmDebt: '📒 <b>{direction}</b>\n{person} — <code>{amount} {currency}</code>\n\nSave this?',
   confirmReminder: '⏰ Remind you: <b>{title}</b>\n📅 {date}',
@@ -108,6 +127,7 @@ const en: Record<MessageKey, string> = {
   confirmSavingsGoal: '🎯 Savings goal <b>{goal}</b> — target <code>{amount} {currency}</code>?',
   confirmDebtPayment: '💳 Record <code>{amount} {currency}</code> payment from <b>{person}</b>?',
   recordedExpense: '✓ <code>{amount} {currency}</code> for {category} recorded.',
+  recordedAddedCategory: '✓ Added <b>{category}</b> and recorded <code>{amount} {currency}</code>.',
   recordedIncome: '✓ <code>{amount} {currency}</code> income recorded.',
   recordedDebt: '✓ {direction}: <b>{person}</b> — <code>{amount} {currency}</code> saved.',
   recordedReminder: '✓ Reminder saved.',
@@ -196,9 +216,20 @@ const am: Record<MessageKey, string> = {
   debtsEmpty: '<b>ያበደሩት እና የተበደሩት</b>\n\nአሁን ምንም የለም። 🎉',
   askCategory: '<code>{amount} {currency}</code> ለምን አወጡ?\n\nለምሳሌ፦ <code>350 food</code>',
   askAmount: 'ምን ያህል ልመዘግብ?',
+  askMonthlyIncome:
+    'የወር ገቢዎ ስንት ነው?\n\nመጠኑን ይጻፉ፣ ለምሳሌ <code>40000</code>። እንደ ደመወዝ እመዘግበዋለሁ፣ የቀረውን ገንዘብ ለማየት።',
+  skipIncomeButton: 'አሁን ይቅር',
+  incomeSkipped: 'ችግር የለም። በኋላ <code>40000 salary</code> በመላክ ይጨምሩ።',
+  incomeNeedAmount: 'መጠኑን ይጻፉ፣ ለምሳሌ <code>40000</code>፣ ወይም አሁን ይቅር ይጫኑ።',
   askPerson: 'ዕዳው ከማን ጋር ነው?',
   askDate: 'የትኛውን ቀን ልጠቀም?',
   confirmExpense: '💸 <code>{amount} {currency}</code> ለ<b>{category}</b> ይመዘገብ?',
+  confirmAddCategoryExpense:
+    '🗂️ <b>{category}</b> የምድብ አይነት አልተመዘገበም። ይጨመር እና <code>{amount} {currency}</code> ይመዘገብ?',
+  confirmAddCategoryIncome:
+    '🗂️ <b>{category}</b> የምድብ አይነት አልተመዘገበም። ይጨመር እና <code>{amount} {currency}</code> ገቢ ይመዘገብ?',
+  confirmAddCategoryBudget:
+    '🗂️ <b>{category}</b> የምድብ አይነት አልተመዘገበም። ይጨመር እና <code>{amount} {currency}</code> ባጀት ይሰናዳ?',
   confirmIncome: '💰 <code>{amount} {currency}</code> ገቢ ለ<b>{category}</b> ይመዘገብ?',
   confirmDebt: '📒 <b>{direction}</b>\n{person} — <code>{amount} {currency}</code>\n\nይቀመጥ?',
   confirmReminder: '⏰ <b>{title}</b>\n📅 {date}',
@@ -206,6 +237,7 @@ const am: Record<MessageKey, string> = {
   confirmSavingsGoal: '🎯 <b>{goal}</b> — <code>{amount} {currency}</code> ቁሳች?',
   confirmDebtPayment: '💳 ከ<b>{person}</b> <code>{amount} {currency}</code> ክፍያ ይመዘገብ?',
   recordedExpense: '✓ <code>{amount} {currency}</code> {category} ተመዝግቧል።',
+  recordedAddedCategory: '✓ <b>{category}</b> ተጨመረ እና <code>{amount} {currency}</code> ተመዝግቧል።',
   recordedIncome: '✓ <code>{amount} {currency}</code> ገቢ ተመዝግቧል።',
   recordedDebt: '✓ {direction}: <b>{person}</b> — <code>{amount} {currency}</code> ተቀምጧል።',
   recordedReminder: '✓ ማስታወሻ ተቀምጧል።',

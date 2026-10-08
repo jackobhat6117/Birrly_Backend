@@ -20,6 +20,15 @@ export const SYSTEM_CATEGORIES = [
  * and any parser result that could not infer one. Logging must never be blocked
  * on picking a category; it can always be corrected later.
  */
+/** Display name for a slug: system name when we know it, otherwise the words the user typed. */
+export function categoryLabel(slug: string | undefined, fallback = ''): string {
+  if (!slug) return fallback;
+  const system = SYSTEM_CATEGORIES.find((category) => category.slug === slug);
+  if (system) return system.name;
+  const raw = fallback.trim() || slug;
+  return raw.charAt(0).toLocaleUpperCase() + raw.slice(1);
+}
+
 export const FALLBACK_CATEGORY_SLUG = {
   EXPENSE: 'other-expense',
   INCOME: 'other-income',

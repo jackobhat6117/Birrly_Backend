@@ -20,6 +20,10 @@ export type StructuredCommand = {
   amount?: string;
   currency?: string;
   categorySlug?: string;
+  /** Set when the slug is not on this account yet. Confirm offers to create it. */
+  proposedCategoryName?: string;
+  /** First-launch income answer: also store this amount as monthly income. */
+  setMonthlyIncome?: boolean;
   description?: string;
   date?: string;
   personName?: string;
