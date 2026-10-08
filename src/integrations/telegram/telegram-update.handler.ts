@@ -212,7 +212,7 @@ export class TelegramUpdateHandler {
     }
 
     const audio = await this.telegram.downloadFile(voice.file_id);
-    let transcript = '';
+    let transcript: string;
     try {
       transcript = await this.speech.transcribe(audio, voice.mime_type ?? 'audio/ogg');
     } catch (error) {
