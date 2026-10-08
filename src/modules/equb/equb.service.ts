@@ -230,7 +230,7 @@ export class EqubService {
   }
 
   private buildJoinLink(token: string): string {
-    const username = this.config.botUsername || 'BirrlyBot';
+    const username = this.config.botUsername || 'birrly_bot';
     return `https://t.me/${username}?start=equb-${token}`;
   }
 

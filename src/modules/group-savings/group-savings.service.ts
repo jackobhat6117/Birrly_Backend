@@ -399,7 +399,7 @@ export class GroupSavingsService {
       };
     });
 
-    const botUsername = this.config.botUsername || 'BirrlyBot';
+    const botUsername = this.config.botUsername || 'birrly_bot';
 
     return {
       id: row.id,
