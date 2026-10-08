@@ -22,12 +22,15 @@ export const ready = asyncHandler(async (_req: Request, res: Response) => {
   const readyState = database && cache;
   // Config-level only (no LLM call, no secret): a quick "is AI wired up?" signal.
   // The live probe lives behind admin auth at GET /api/v1/admin/ai/health?probe=true.
-  const llmEnabled = config.llm.provider !== 'disabled' && config.llm.apiKey.trim().length > 0;
+  const geminiOn = config.llm.provider === 'gemini' && config.llm.apiKey.trim().length > 0;
+  const groqOn = config.llm.groqApiKey.trim().length > 0;
+  const llmEnabled = geminiOn || groqOn;
+  const llmProvider = geminiOn && groqOn ? 'gemini+groq' : groqOn && !geminiOn ? 'groq' : config.llm.provider;
   res.status(readyState ? 200 : 503).json({
     data: {
       status: readyState ? 'ready' : 'degraded',
       checks: { database, redis: cache },
-      llm: { enabled: llmEnabled, provider: config.llm.provider },
+      llm: { enabled: llmEnabled, provider: llmProvider },
     },
   });
 });

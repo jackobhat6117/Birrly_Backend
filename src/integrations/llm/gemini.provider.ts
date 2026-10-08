@@ -1,9 +1,9 @@
-import { TRANSACTION_PARSER_PROMPT_V1 } from '@/modules/ai/prompts/transaction-parser.v1';
-import type { ParseTextInput, StructuredCommand } from '@/modules/ai/ai.types';
-import { SYSTEM_CATEGORIES } from '@/shared/constants/categories';
 import type { LLMProvider } from '@/integrations/llm/llm.provider';
+import { LlmHttpError } from '@/integrations/llm/llm-error';
+import { buildParserPrompt, extractJsonObject } from '@/integrations/llm/parser-prompt';
+import type { ParseTextInput, StructuredCommand } from '@/modules/ai/ai.types';
 
-const DEFAULT_GEMINI_MODEL = 'gemini-3.6-flash';
+const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash-lite';
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 /** Chat parsing is a short JSON classification. Don't make the user wait on a hung call. */
 const PARSE_TIMEOUT_MS = 8_000;
@@ -19,42 +19,8 @@ type GeminiGenerateResponse = {
   error?: { message?: string };
 };
 
-function buildParserPrompt(input: ParseTextInput): string {
-  const categorySlugs = SYSTEM_CATEGORIES.map((category) => category.slug).join(', ');
-  return `${TRANSACTION_PARSER_PROMPT_V1}
-
-Allowed intents:
-CREATE_EXPENSE, CREATE_INCOME, CREATE_DEBT, RECORD_DEBT_PAYMENT, CREATE_REMINDER,
-CREATE_BUDGET, CREATE_SAVINGS_GOAL, QUERY_SPENDING, QUERY_BALANCE, QUERY_DEBT,
-QUERY_REPORT, GREET, WELLBEING, THANKS, UNKNOWN
-
-Allowed categorySlug values (lowercase): ${categorySlugs}
-
-debtType: OWED_TO_ME when someone owes the user, I_OWE when the user owes someone.
-
-Return a single JSON object with these fields:
-- intent (required)
-- amount (string, optional)
-- currency (string, optional, default ${input.currency})
-- categorySlug (optional, for expenses/budgets/queries)
-- description (optional; savings goal name for CREATE_SAVINGS_GOAL)
-- date (ISO date string, optional)
-- personName (optional, for debts and debt payments)
-- debtType (optional: OWED_TO_ME or I_OWE)
-- reminderTitle (optional)
-- confidence (number 0-1, required)
-- missingFields (string array, e.g. amount, categorySlug, personName, description)
-- source must be "llm"
-
-User language hint: ${input.language}
-Default currency: ${input.currency}
-${input.userContext ? `\n${input.userContext}\n` : ''}
-User message:
-${input.text}`;
-}
-
 /**
- * Gemini 3.6 Flash thinks at "medium" by default, which is why a one-line
+ * Gemini 3 Flash thinks at "medium" by default, which is why a one-line
  * expense can sit for many seconds. Classification should stay at "minimal".
  * Older Gemini models reject thinkingLevel, so only send it for 3.x.
  * temperature is omitted: Gemini 3 ignores it and later models reject it.
@@ -76,13 +42,6 @@ export function generationConfig(model: string, purpose: 'parse' | 'generate') {
   }
 
   return config;
-}
-
-export function extractJsonObject(text: string): unknown {
-  const trimmed = text.trim();
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const candidate = (fenced?.[1] ?? trimmed).trim();
-  return JSON.parse(candidate) as unknown;
 }
 
 export class GeminiLlmProvider implements LLMProvider {
@@ -144,7 +103,10 @@ export class GeminiLlmProvider implements LLMProvider {
 
     const payload = (await response.json()) as GeminiGenerateResponse;
     if (!response.ok) {
-      throw new Error(payload.error?.message ?? `Gemini request failed (${response.status})`);
+      throw new LlmHttpError(
+        payload.error?.message ?? `Gemini request failed (${response.status})`,
+        response.status,
+      );
     }
 
     const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('').trim();

@@ -19,7 +19,11 @@ const envSchema = z.object({
   TELEGRAM_BOT_USERNAME: z.string().default('birrly_bot'),
   LLM_API_KEY: z.string().default(''),
   LLM_PROVIDER: z.enum(['disabled', 'gemini', 'openai', 'anthropic']).default('gemini'),
-  LLM_MODEL: z.string().default('gemini-3.6-flash'),
+  // Flash-Lite has a higher free-tier daily quota than gemini-3.6-flash.
+  LLM_MODEL: z.string().default('gemini-3.5-flash-lite'),
+  // Optional second provider. Used when Gemini returns 429/503, or alone if Gemini has no key.
+  GROQ_API_KEY: z.string().default(''),
+  GROQ_MODEL: z.string().default('openai/gpt-oss-20b'),
   DEV_AUTH_ENABLED: z
     .string()
     .default('false')

@@ -1,6 +1,6 @@
 import { prisma } from '@/database/prisma';
 import { redis } from '@/database/redis';
-import { createLlmProvider } from '@/integrations/llm/llm.provider';
+import { createLlmProvider, describeLlm } from '@/integrations/llm/llm.provider';
 import { config } from '@/app/config';
 import { ConversationStore } from '@/integrations/telegram/conversation.store';
 import { telegramBotAdapter } from '@/integrations/telegram/telegram-bot.adapter';
@@ -157,10 +157,7 @@ export function createContainer() {
   const adminService = new AdminService(prisma, feedbackRepository, subscriptionService);
   const feedbackService = new FeedbackService(feedbackRepository);
   const llmProvider = createLlmProvider(config.llm);
-  const aiHealthService = new AiHealthService(llmProvider, {
-    provider: config.llm.provider,
-    model: config.llm.model,
-  });
+  const aiHealthService = new AiHealthService(llmProvider, describeLlm(config.llm));
   const reportInsightService = new ReportInsightService(
     prisma,
     subscriptionService,

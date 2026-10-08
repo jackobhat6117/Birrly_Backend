@@ -37,6 +37,8 @@ export const config = {
     provider: env.LLM_PROVIDER,
     apiKey: env.LLM_API_KEY,
     model: env.LLM_MODEL,
+    groqApiKey: env.GROQ_API_KEY,
+    groqModel: env.GROQ_MODEL,
   },
   corsOrigins: env.CORS_ORIGIN
     ? env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)
