@@ -40,6 +40,8 @@ export const config = {
     groqApiKey: env.GROQ_API_KEY,
     groqModel: env.GROQ_MODEL,
     whisperModel: env.GROQ_WHISPER_MODEL,
+    addisApiKey: env.ADDIS_API_KEY,
+    addisSttBackend: env.ADDIS_STT_BACKEND,
   },
   corsOrigins: env.CORS_ORIGIN
     ? env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)

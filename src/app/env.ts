@@ -25,6 +25,9 @@ const envSchema = z.object({
   GROQ_API_KEY: z.string().default(''),
   GROQ_MODEL: z.string().default('openai/gpt-oss-20b'),
   GROQ_WHISPER_MODEL: z.string().default('whisper-large-v3-turbo'),
+  // Amharic speech-to-text (Addis Scribe). Preferred over Groq/Gemini when set.
+  ADDIS_API_KEY: z.string().default(''),
+  ADDIS_STT_BACKEND: z.enum(['standard', 'turbo']).default('standard'),
   DEV_AUTH_ENABLED: z
     .string()
     .default('false')
