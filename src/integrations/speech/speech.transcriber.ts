@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { isRetryableLlmError, LlmHttpError } from '@/integrations/llm/llm-error';
+import { LlmHttpError } from '@/integrations/llm/llm-error';
+import { logger } from '@/shared/logger/logger';
 
 const HASAB_TRANSCRIBE_URL = 'https://api.hasab.ai/api/v1/upload-audio';
 const ADDIS_SCRIBE_URL = 'https://api.addisassistant.com/api/v1/scribe/transcribe';
@@ -66,7 +67,8 @@ export class SpeechTranscriber {
       try {
         return await this.transcribeWithHasab(audio, mimeType);
       } catch (error) {
-        if (!isRetryableLlmError(error) || !this.hasBackup('hasab')) {
+        logger.warn({ err: error }, 'Hasab transcription failed');
+        if (!this.hasBackup('hasab')) {
           throw error;
         }
       }
@@ -75,7 +77,8 @@ export class SpeechTranscriber {
       try {
         return await this.transcribeWithAddis(audio, mimeType);
       } catch (error) {
-        if (!isRetryableLlmError(error) || !this.hasBackup('addis')) {
+        logger.warn({ err: error }, 'Addis transcription failed');
+        if (!this.hasBackup('addis')) {
           throw error;
         }
       }
@@ -98,15 +101,23 @@ export class SpeechTranscriber {
   }
 
   private async transcribeWithHasab(audio: Buffer, mimeType: string): Promise<string> {
-    const upload = hasabAccepts(mimeType)
+    let upload = hasabAccepts(mimeType)
       ? { bytes: audio, mimeType, filename: mimeType.includes('wav') ? 'voice.wav' : 'voice.mp3' }
-      : { bytes: await convertToWav(audio), mimeType: 'audio/wav', filename: 'voice.wav' };
+      : { bytes: audio, mimeType, filename: 'voice.ogg' };
+    if (!hasabAccepts(mimeType)) {
+      try {
+        upload = { bytes: await convertToWav(audio), mimeType: 'audio/wav', filename: 'voice.wav' };
+      } catch (error) {
+        logger.warn({ err: error }, 'Voice conversion failed; sending the original file to Hasab');
+      }
+    }
     const language = this.options.hasabLanguage.trim() || 'amh';
     const form = new FormData();
     form.append('audio', new Blob([new Uint8Array(upload.bytes)], { type: upload.mimeType }), upload.filename);
     form.append('transcribe', 'true');
     form.append('translate', 'false');
     form.append('summarize', 'false');
+    form.append('is_meeting', 'false');
     form.append('language', language);
     form.append('source_language', language);
 
@@ -117,11 +128,13 @@ export class SpeechTranscriber {
       body: form,
       signal: AbortSignal.timeout(ADDIS_TIMEOUT_MS),
     });
-    const payload = (await response.json()) as {
-      transcription?: string;
-      audio?: { transcription?: string };
-      message?: string;
-    };
+    const raw = await response.text();
+    let payload: { transcription?: string; audio?: { transcription?: string }; message?: string } = {};
+    try {
+      payload = JSON.parse(raw) as typeof payload;
+    } catch {
+      throw new LlmHttpError(raw.slice(0, 180) || `Hasab transcription failed (${response.status})`, response.status || 502);
+    }
     const transcript = payload.transcription ?? payload.audio?.transcription;
     if (!response.ok || transcript === undefined) {
       throw new LlmHttpError(payload.message ?? `Hasab transcription failed (${response.status})`, response.status || 502);

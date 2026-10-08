@@ -50,6 +50,7 @@ export type MessageKey =
   | 'voiceUnavailable'
   | 'voiceTooLong'
   | 'voiceEmpty'
+  | 'voiceFailed'
   | 'openAppButton'
   | 'upgradeButton'
   | 'btnDashboard'
@@ -151,6 +152,7 @@ const en: Record<MessageKey, string> = {
   voiceUnavailable: 'Voice notes need an AI key. Type it instead, for example <code>80 taxi</code>.',
   voiceTooLong: 'That voice note is too long. Keep it under a minute, or type the amount.',
   voiceEmpty: 'I could not hear that. Try again, or type it — for example <code>80 taxi</code>.',
+  voiceFailed: 'I could not transcribe that voice note.\n<code>{reason}</code>',
   unauthorized: 'I could not verify this request.',
   internalError: 'Something went wrong. Please try again.',
   languageSet: 'Language set to English.',
@@ -262,6 +264,7 @@ const am: Record<MessageKey, string> = {
   voiceUnavailable: 'የድምጽ መልእክት AI ቁልፍ ይፈልጋል። ይጻፉ፦ <code>80 taxi</code>',
   voiceTooLong: 'ድምጹ ረጅም ነው። ከአንድ ደቂቃ በታች ይሁን፣ ወይም ይጻፉ።',
   voiceEmpty: 'መስማት አልቻልኩም። እንደገና ይሞክሩ ወይም ይጻፉ።',
+  voiceFailed: 'ድምጹን ወደ ጽሑፍ መቀየር አልተቻለም።\n<code>{reason}</code>',
   unauthorized: 'ጥያቄውን ማረጋገጥ አልተቻለም።',
   internalError: 'ችግር ተፈጥሯል። እንደገና ይሞክሩ።',
   languageSet: 'ቋንቋ ወደ አማርኛ ተቀይሯል።',

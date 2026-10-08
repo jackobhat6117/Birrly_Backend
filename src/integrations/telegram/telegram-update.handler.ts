@@ -212,7 +212,19 @@ export class TelegramUpdateHandler {
     }
 
     const audio = await this.telegram.downloadFile(voice.file_id);
-    const transcript = await this.speech.transcribe(audio, voice.mime_type ?? 'audio/ogg');
+    let transcript = '';
+    try {
+      transcript = await this.speech.transcribe(audio, voice.mime_type ?? 'audio/ogg');
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'unknown error';
+      logger.warn({ err: error, userId: user.id }, 'Voice transcription failed');
+      await this.telegram.sendMessage({
+        chatId,
+        text: t(user.language, 'voiceFailed', { reason: escapeHtml(reason) }),
+        parseMode: 'HTML',
+      });
+      return;
+    }
     if (!transcript) {
       await this.telegram.sendMessage({
         chatId,

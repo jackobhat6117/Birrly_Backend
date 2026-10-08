@@ -19,7 +19,11 @@ describe('SpeechTranscriber', () => {
       const headers = init?.headers as Record<string, string>;
       expect(headers.Authorization).toBe('Bearer hasab-key');
       expect(init?.body).toBeInstanceOf(FormData);
-      return { ok: true, status: 200, json: async () => ({ transcription: 'ሰማንያ ታክሲ' }) };
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ transcription: 'ሰማንያ ታክሲ' }),
+      };
     });
 
     const text = await new SpeechTranscriber({
@@ -31,6 +35,25 @@ describe('SpeechTranscriber', () => {
 
     expect(text).toBe('ሰማንያ ታክሲ');
     expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
+  it('uses Addis when Hasab rejects the voice note', async () => {
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (String(url).includes('hasab.ai')) {
+        return { ok: false, status: 422, text: async () => JSON.stringify({ message: 'unsupported audio' }), json: async () => ({}) };
+      }
+      return { ok: true, status: 200, json: async () => ({ data: { text: '80 taxi' } }) };
+    });
+
+    const text = await new SpeechTranscriber({
+      ...base,
+      hasabApiKey: 'hasab-key',
+      addisApiKey: 'addis-key',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    }).transcribe(Buffer.from('audio'), 'audio/wav');
+
+    expect(text).toBe('80 taxi');
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
   it('prefers Addis Scribe for Amharic voice notes', async () => {
