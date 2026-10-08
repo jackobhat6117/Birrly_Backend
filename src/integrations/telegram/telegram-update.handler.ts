@@ -36,6 +36,7 @@ import {
   startKeyboard,
 } from '@/integrations/telegram/telegram-ui';
 import { buildHelpfulNudge } from '@/integrations/telegram/nudge-message';
+import { openMiniAppKeyboard } from '@/integrations/telegram/telegram-bootstrap';
 import { AppError, ERROR_CODE } from '@/shared/errors/app-error';
 import { t } from '@/shared/i18n';
 import { logger } from '@/shared/logger/logger';
@@ -539,6 +540,7 @@ export class TelegramUpdateHandler {
         chatId,
         text: t(user.language, 'groupBudgetJoined', { name: escapeHtml(gb.name) }),
         parseMode: 'HTML',
+        replyMarkup: openMiniAppKeyboard(user.language),
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : t(user.language, 'internalError');
@@ -636,6 +638,7 @@ export class TelegramUpdateHandler {
         chatId,
         text: t(user.language, 'groupSavingsJoined', { name: escapeHtml(gs.name) }),
         parseMode: 'HTML',
+        replyMarkup: openMiniAppKeyboard(user.language),
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : t(user.language, 'internalError');

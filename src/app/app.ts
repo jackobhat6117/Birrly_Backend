@@ -21,8 +21,41 @@ export function createApp() {
   app.use(helmet());
   app.use(
     cors({
-      origin:
-        config.corsOrigins.length > 0 ? config.corsOrigins : config.isProduction ? false : true,
+      origin: (requestOrigin, callback) => {
+        // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+        if (!requestOrigin) {
+          callback(null, true);
+          return;
+        }
+
+        if (config.corsOrigins.length > 0) {
+          const isAllowed = config.corsOrigins.some((allowed) => {
+            if (allowed === '*' || allowed === requestOrigin) return true;
+            // Match wildcards like https://*.vercel.app
+            if (allowed.includes('*')) {
+              const regex = new RegExp(`^${allowed.replace(/\./g, '\\.').replace(/\*/g, '.*')}$`);
+              return regex.test(requestOrigin);
+            }
+            return false;
+          });
+          callback(null, isAllowed);
+          return;
+        }
+
+        // In non-production, allow any origin; in production default to Vercel/localhost domains if unspecified
+        if (!config.isProduction) {
+          callback(null, true);
+          return;
+        }
+
+        // Default allow Vercel previews/deployments if CORS_ORIGIN was omitted
+        if (requestOrigin.endsWith('.vercel.app')) {
+          callback(null, true);
+          return;
+        }
+
+        callback(null, false);
+      },
       allowedHeaders: [
         'Accept',
         'Authorization',
