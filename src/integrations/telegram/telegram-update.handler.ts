@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import type { AiParseService } from '@/modules/ai/ai-parse.service';
 import type { AiInteractionService } from '@/modules/ai/ai-interaction.service';
 import type { BudgetService } from '@/modules/budgets/budget.service';
+import type { GroupBudgetService } from '@/modules/group-budgets/group-budget.service';
 import type { CategoryService } from '@/modules/categories/category.service';
 import type { DebtService } from '@/modules/debts/debt.service';
 import type { EqubService } from '@/modules/equb/equb.service';
@@ -53,6 +54,7 @@ export class TelegramUpdateHandler {
     private readonly budgets: BudgetService,
     private readonly savings: SavingsService,
     private readonly categories: CategoryService,
+    private readonly groupBudgets: GroupBudgetService,
     private readonly conversations: ConversationStore,
     private readonly telegram: TelegramBotAdapter,
     private readonly feedback: FeedbackService,
@@ -120,7 +122,16 @@ export class TelegramUpdateHandler {
           await this.handleEqubJoin(chatId, user, args.slice('equb-'.length));
           return;
         }
+        // Deep link: /start gb-<token> joins a group budget.
+        if (args.startsWith('gb-')) {
+          await this.handleGroupBudgetJoin(chatId, user, args.slice('gb-'.length));
+          return;
+        }
         await this.sendWelcome(chatId, user);
+        return;
+      case 'groupbudget':
+      case 'gb':
+        await this.handleGroupBudgetCommand(chatId, user, args);
         return;
       case 'help':
         await this.sendHelp(chatId, user);
@@ -214,6 +225,40 @@ export class TelegramUpdateHandler {
     if (command.intent.startsWith('QUERY_')) {
       await this.handleQuery(chatId, user, command);
       return;
+    }
+
+    // If message is in a linked group chat and user logs an expense, record it for the group budget!
+    const linkedGroupBudget = await this.groupBudgets.findByTelegramChatId(String(chatId));
+    if (linkedGroupBudget && command.intent === 'CREATE_EXPENSE') {
+      try {
+        const cat = command.categorySlug ? await this.categories.resolve(user.id, { categorySlug: command.categorySlug }, 'EXPENSE') : null;
+        await this.groupBudgets.addExpense(
+          linkedGroupBudget.id,
+          user.id,
+          {
+            amount: command.amount ?? '0',
+            categoryId: cat?.id,
+            description: command.description,
+          },
+          'TELEGRAM',
+        );
+        const updated = await this.groupBudgets.getById(linkedGroupBudget.id, user.id);
+        const name = user.firstName || user.telegramUsername || 'Member';
+        await this.telegram.sendMessage({
+          chatId,
+          text: t(user.language, 'groupBudgetExpenseLogged', {
+            amount: command.amount ?? '0',
+            currency: user.currency,
+            user: escapeHtml(name),
+            name: escapeHtml(updated.name),
+            remaining: updated.remaining,
+          }),
+          parseMode: 'HTML',
+        });
+        return;
+      } catch (err: unknown) {
+        logger.warn({ err }, 'Failed to record expense for linked group budget');
+      }
     }
 
     const missingReply = this.missingFieldReply(user, command);
@@ -458,6 +503,103 @@ export class TelegramUpdateHandler {
           { text: member.name, callback_data: `equbjoin:${member.id}` },
         ]),
       },
+    });
+  }
+
+  private async handleGroupBudgetJoin(
+    chatId: number,
+    user: AuthenticatedUser,
+    token: string,
+  ): Promise<void> {
+    const gb = await this.groupBudgets.findByJoinToken(token);
+    if (!gb) {
+      await this.telegram.sendMessage({
+        chatId,
+        text: t(user.language, 'groupBudgetJoinNotFound'),
+        parseMode: 'HTML',
+      });
+      return;
+    }
+
+    try {
+      await this.groupBudgets.joinByToken(token, user.id);
+      await this.telegram.sendMessage({
+        chatId,
+        text: t(user.language, 'groupBudgetJoined', { name: escapeHtml(gb.name) }),
+        parseMode: 'HTML',
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : t(user.language, 'internalError');
+      await this.telegram.sendMessage({
+        chatId,
+        text: escapeHtml(msg),
+        parseMode: 'HTML',
+      });
+    }
+  }
+
+  private async handleGroupBudgetCommand(
+    chatId: number,
+    user: AuthenticatedUser,
+    args: string,
+  ): Promise<void> {
+    const trimmed = args.trim();
+    // In group chat, if user sends /gb link <token>
+    if (trimmed.startsWith('link ')) {
+      const token = trimmed.slice(5).trim();
+      const gb = await this.groupBudgets.findByJoinToken(token);
+      if (!gb) {
+        await this.telegram.sendMessage({
+          chatId,
+          text: t(user.language, 'groupBudgetJoinNotFound'),
+          parseMode: 'HTML',
+        });
+        return;
+      }
+      await this.groupBudgets.linkTelegramChat(gb.id, user.id, String(chatId));
+      await this.telegram.sendMessage({
+        chatId,
+        text: t(user.language, 'groupBudgetLinked', { name: escapeHtml(gb.name) }),
+        parseMode: 'HTML',
+      });
+      return;
+    }
+
+    // Check if current chat is linked to a group budget
+    const linked = await this.groupBudgets.findByTelegramChatId(String(chatId));
+    if (linked) {
+      const details = await this.groupBudgets.getById(linked.id, user.id);
+      await this.telegram.sendMessage({
+        chatId,
+        text: t(user.language, 'groupBudgetStatus', {
+          name: escapeHtml(details.name),
+          amount: details.amount,
+          spent: details.spent,
+          currency: details.currency,
+          percent: details.percent,
+          remaining: details.remaining,
+        }),
+        parseMode: 'HTML',
+      });
+      return;
+    }
+
+    // Otherwise list user's group budgets
+    const list = await this.groupBudgets.list(user.id);
+    if (list.length === 0) {
+      await this.telegram.sendMessage({
+        chatId,
+        text: 'You have no group budgets. Open the Mini App to create one or join with an invite link.',
+        parseMode: 'HTML',
+      });
+      return;
+    }
+
+    const lines = list.map((b) => `• <b>${escapeHtml(b.name)}</b>: ${b.spent} / ${b.amount} ${b.currency} (${b.percent}%)`).join('\n');
+    await this.telegram.sendMessage({
+      chatId,
+      text: `<b>Your Group Budgets:</b>\n\n${lines}`,
+      parseMode: 'HTML',
     });
   }
 

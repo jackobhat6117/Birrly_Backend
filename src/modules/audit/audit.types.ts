@@ -18,7 +18,10 @@ export type AuditAction =
   | 'EQUB_CREATED'
   | 'EQUB_CONTRIBUTION_RECORDED'
   | 'EQUB_CYCLE_ADVANCED'
-  | 'EQUB_NUDGE_SENT';
+  | 'EQUB_NUDGE_SENT'
+  | 'GROUP_BUDGET_CREATED'
+  | 'GROUP_BUDGET_MEMBER_JOINED'
+  | 'GROUP_BUDGET_EXPENSE_ADDED';
 
 export type AuditEntry = {
   userId?: string;

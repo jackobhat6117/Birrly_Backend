@@ -68,7 +68,12 @@ export type MessageKey =
   | 'digestFooter'
   | 'reminderNotificationTitle'
   | 'debtLent'
-  | 'debtBorrowed';
+  | 'debtBorrowed'
+  | 'groupBudgetJoinNotFound'
+  | 'groupBudgetJoined'
+  | 'groupBudgetLinked'
+  | 'groupBudgetStatus'
+  | 'groupBudgetExpenseLogged';
 
 const en: Record<MessageKey, string> = {
   welcome:
@@ -152,6 +157,13 @@ const en: Record<MessageKey, string> = {
   reminderNotificationTitle: '⏰ <b>Reminder</b>',
   debtLent: 'You lent',
   debtBorrowed: 'You borrowed',
+  groupBudgetJoinNotFound: 'This Group Budget invite link is no longer valid or has expired.',
+  groupBudgetJoined: '✓ Joined <b>{name}</b>! You can now track shared expenses with your group in Birrly.',
+  groupBudgetLinked: '✓ This chat is now linked to <b>{name}</b>! Shared expenses logged here will count towards this budget.',
+  groupBudgetStatus:
+    '📊 <b>{name}</b>\nBudget: <code>{amount} {currency}</code>\nSpent: <code>{spent} {currency}</code> ({percent}%)\nRemaining: <code>{remaining} {currency}</code>',
+  groupBudgetExpenseLogged:
+    '✓ <code>{amount} {currency}</code> logged by <b>{user}</b> for <b>{name}</b>.\nRemaining: <code>{remaining} {currency}</code>',
 };
 
 const am: Record<MessageKey, string> = {
@@ -233,6 +245,13 @@ const am: Record<MessageKey, string> = {
   reminderNotificationTitle: '⏰ <b>ማስታወሻ</b>',
   debtLent: 'ያበደሩት',
   debtBorrowed: 'የተበደሩት',
+  groupBudgetJoinNotFound: 'ይህ የቡድን ባጀት መጋበዣ ሊንክ ከእንግዲህ አይሰራም ወይም ጊዜው አልፏል።',
+  groupBudgetJoined: '✓ ወደ <b>{name}</b> የቡድን ባጀት ተቀላቅለዋል! አሁን የጋራ ወጪዎችን በቢርሊ መከታተል ይችላሉ።',
+  groupBudgetLinked: '✓ ይህ የቴሌግራም ግሩፕ ከ<b>{name}</b> ጋር ተገናኝቷል! እዚህ የሚመዘገቡ ወጪዎች ለዚህ ባጀት ይሰላሉ።',
+  groupBudgetStatus:
+    '📊 <b>{name}</b>\nባጀት፦ <code>{amount} {currency}</code>\nየወጣ፦ <code>{spent} {currency}</code> ({percent}%)\nየቀረ፦ <code>{remaining} {currency}</code>',
+  groupBudgetExpenseLogged:
+    '✓ <code>{amount} {currency}</code> በ <b>{user}</b> ለ<b>{name}</b> ተመዝግቧል።\nየቀረ ባጀት፦ <code>{remaining} {currency}</code>',
 };
 
 const catalogs: Record<string, Record<MessageKey, string>> = { en, am };

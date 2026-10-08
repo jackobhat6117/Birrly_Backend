@@ -11,6 +11,7 @@ import { reminderRoutes } from '@/modules/reminders/reminder.routes';
 import { reportRoutes } from '@/modules/reports/report.routes';
 import { coachRoutes } from '@/modules/coach/coach.routes';
 import { budgetRoutes } from '@/modules/budgets/budget.routes';
+import { groupBudgetRoutes } from '@/modules/group-budgets/group-budget.routes';
 import { savingsRoutes } from '@/modules/savings/savings.routes';
 import { subscriptionRoutes } from '@/modules/subscriptions/subscription.routes';
 import { transactionRoutes } from '@/modules/transactions/transaction.routes';
@@ -40,6 +41,7 @@ export function createRoutes(container: AppContainer): Router {
   router.use('/reports', reportRoutes(container.reportController));
   router.use('/coach', coachRoutes(container.coachController));
   router.use('/budgets', budgetRoutes(container.budgetController));
+  router.use('/group-budgets', groupBudgetRoutes(container.groupBudgetController));
   router.use('/savings-goals', savingsRoutes(container.savingsController));
   router.use('/analytics', rateLimit({ prefix: 'analytics', max: 60 }), analyticsRoutes(container.analyticsController));
   router.use('/feedback', rateLimit({ prefix: 'feedback', max: 5 }), feedbackRoutes(container.feedbackController));

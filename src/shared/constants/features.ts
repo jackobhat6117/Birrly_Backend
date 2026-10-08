@@ -11,6 +11,8 @@ export const FEATURE = {
   DEBT_TRACKING: 'DEBT_TRACKING',
   DEBT_NUDGE: 'DEBT_NUDGE',
   EQUB: 'EQUB',
+  GROUP_BUDGETS: 'GROUP_BUDGETS',
+  UNLIMITED_GROUP_BUDGETS: 'UNLIMITED_GROUP_BUDGETS',
   AI_COACH: 'AI_COACH',
 } as const;
 
@@ -19,3 +21,6 @@ export type Feature = (typeof FEATURE)[keyof typeof FEATURE];
 export const FREE_REMINDER_LIMIT = 10;
 export const FREE_BUDGET_LIMIT = 5;
 export const FREE_SAVINGS_GOAL_LIMIT = 1;
+
+export const FREE_GROUP_BUDGET_LIMIT = 1;
+export const FREE_GROUP_BUDGET_MEMBERS_LIMIT = 3;

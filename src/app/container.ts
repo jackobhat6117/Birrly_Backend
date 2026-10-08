@@ -65,6 +65,9 @@ import { TestController } from '@/modules/test/test.controller';
 import { FeedbackController } from '@/modules/feedback/feedback.controller';
 import { FeedbackRepository } from '@/modules/feedback/feedback.repository';
 import { FeedbackService } from '@/modules/feedback/feedback.service';
+import { GroupBudgetRepository } from '@/modules/group-budgets/group-budget.repository';
+import { GroupBudgetService } from '@/modules/group-budgets/group-budget.service';
+import { GroupBudgetController } from '@/modules/group-budgets/group-budget.controller';
 
 export function createContainer() {
   const userRepository = new UserRepository(prisma);
@@ -78,6 +81,7 @@ export function createContainer() {
   const budgetRepository = new BudgetRepository(prisma);
   const savingsRepository = new SavingsRepository(prisma);
   const feedbackRepository = new FeedbackRepository(prisma);
+  const groupBudgetRepository = new GroupBudgetRepository(prisma);
 
   const auditService = new AuditService(prisma);
   const subscriptionService = new SubscriptionService(prisma, config.subscription);
@@ -125,6 +129,16 @@ export function createContainer() {
     auditService,
   );
   const savingsService = new SavingsService(savingsRepository, subscriptionService, auditService);
+  const groupBudgetService = new GroupBudgetService(
+    prisma,
+    groupBudgetRepository,
+    userRepository,
+    userService,
+    subscriptionService,
+    auditService,
+    notificationService,
+    { botUsername: config.telegram.botUsername },
+  );
   const analyticsService = new AnalyticsService(prisma);
   const adminService = new AdminService(prisma, feedbackRepository, subscriptionService);
   const feedbackService = new FeedbackService(feedbackRepository);
@@ -184,6 +198,7 @@ export function createContainer() {
     budgetService,
     savingsService,
     categoryService,
+    groupBudgetService,
     conversations,
     telegramBotAdapter,
     feedbackService,
@@ -209,6 +224,7 @@ export function createContainer() {
     digestService,
     budgetService,
     savingsService,
+    groupBudgetService,
     subscriptionService,
     analyticsService,
     adminService,
@@ -221,6 +237,7 @@ export function createContainer() {
     transactionController: new TransactionController(transactionService),
     debtController: new DebtController(debtService),
     equbController: new EqubController(equbService),
+    groupBudgetController: new GroupBudgetController(groupBudgetService),
     reminderController: new ReminderController(reminderService),
     reportController: new ReportController(reportService, reportInsightService),
     coachController: new CoachController(coachService),

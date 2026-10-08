@@ -16,6 +16,8 @@ const FREE_ENTITLEMENTS: EntitlementMap = {
   [FEATURE.DEBT_TRACKING]: true,
   [FEATURE.DEBT_NUDGE]: true,
   [FEATURE.EQUB]: false,
+  [FEATURE.GROUP_BUDGETS]: true,
+  [FEATURE.UNLIMITED_GROUP_BUDGETS]: false,
   [FEATURE.AI_COACH]: false,
 };
 
@@ -32,6 +34,8 @@ const PREMIUM_ENTITLEMENTS: EntitlementMap = {
   [FEATURE.DEBT_TRACKING]: true,
   [FEATURE.DEBT_NUDGE]: true,
   [FEATURE.EQUB]: true,
+  [FEATURE.GROUP_BUDGETS]: true,
+  [FEATURE.UNLIMITED_GROUP_BUDGETS]: true,
   [FEATURE.AI_COACH]: true,
 };
 

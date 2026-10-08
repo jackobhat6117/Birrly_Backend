@@ -187,6 +187,9 @@ model User {
   auditLogs                   AuditLog[]
   productEvents               ProductEvent[]
   feedback                    Feedback[]
+  groupBudgetsCreated         GroupBudget[]                @relation("CreatedGroupBudgets")
+  groupBudgetMemberships      GroupBudgetMember[]
+  groupBudgetExpenses         GroupBudgetExpense[]
 
   @@map("users")
 }
@@ -227,6 +230,7 @@ model Category {
   transactions     Transaction[]
   budgets          Budget[]
   budgetCategories BudgetCategory[]
+  groupBudgetExpenses GroupBudgetExpense[]
 
   @@unique([userId, slug])
   @@index([slug])
@@ -790,4 +794,77 @@ model Feedback {
   @@index([userId, createdAt])
   @@index([createdAt])
   @@map("feedback")
+}
+
+enum GroupBudgetRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+
+  @@map("group_budget_role")
+}
+
+model GroupBudget {
+  id             String           @id @default(uuid()) @map("id")
+  createdById    String           @map("created_by_id")
+  name           String           @map("name")
+  description    String?          @map("description")
+  amount         Decimal          @map("amount") @db.Decimal(19, 4)
+  currency       String           @default("ETB") @map("currency")
+  periodUnit     BudgetPeriodUnit @default(MONTH) @map("period_unit")
+  periodCount    Int              @default(1) @map("period_count")
+  startDate      DateTime         @default(now()) @map("start_date") @db.Date
+  joinToken      String           @unique @map("join_token")
+  telegramChatId String?          @map("telegram_chat_id")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  createdBy User                 @relation("CreatedGroupBudgets", fields: [createdById], references: [id], onDelete: Cascade)
+  members   GroupBudgetMember[]
+  expenses  GroupBudgetExpense[]
+
+  @@index([createdById])
+  @@index([telegramChatId])
+  @@index([joinToken])
+  @@map("group_budgets")
+}
+
+model GroupBudgetMember {
+  id            String          @id @default(uuid()) @map("id")
+  groupBudgetId String          @map("group_budget_id")
+  userId        String          @map("user_id")
+  role          GroupBudgetRole @default(MEMBER) @map("role")
+  joinedAt      DateTime        @default(now()) @map("joined_at")
+
+  groupBudget GroupBudget          @relation(fields: [groupBudgetId], references: [id], onDelete: Cascade)
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses    GroupBudgetExpense[]
+
+  @@unique([groupBudgetId, userId])
+  @@index([userId])
+  @@map("group_budget_members")
+}
+
+model GroupBudgetExpense {
+  id            String            @id @default(uuid()) @map("id")
+  groupBudgetId String            @map("group_budget_id")
+  memberId      String            @map("member_id")
+  userId        String            @map("user_id")
+  categoryId    String?           @map("category_id")
+  amount        Decimal           @map("amount") @db.Decimal(19, 4)
+  currency      String            @default("ETB") @map("currency")
+  description   String?           @map("description")
+  spentAt       DateTime          @default(now()) @map("spent_at")
+  source        TransactionSource @default(MINI_APP) @map("source")
+  createdAt     DateTime          @default(now()) @map("created_at")
+
+  groupBudget GroupBudget       @relation(fields: [groupBudgetId], references: [id], onDelete: Cascade)
+  member      GroupBudgetMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([groupBudgetId, spentAt])
+  @@index([userId])
+  @@map("group_budget_expenses")
 }
