@@ -47,6 +47,9 @@ export type MessageKey =
   | 'feedbackPrompt'
   | 'feedbackReceived'
   | 'aiQuotaExceeded'
+  | 'voiceUnavailable'
+  | 'voiceTooLong'
+  | 'voiceEmpty'
   | 'openAppButton'
   | 'upgradeButton'
   | 'btnDashboard'
@@ -145,6 +148,9 @@ const en: Record<MessageKey, string> = {
   aiUnavailable: 'AI is unavailable. Please enter amount and category, for example: <code>300 food</code>',
   aiQuotaExceeded:
     "You've used your <b>{limit}</b> free AI messages for today — it resets tomorrow. 💡 You can still log anytime with shorthand like <code>80 taxi</code> or <code>Abebe 2000</code>.\n\nWant to chat in full sentences without limits? Upgrade to Premium for unlimited AI.",
+  voiceUnavailable: 'Voice notes need an AI key. Type it instead, for example <code>80 taxi</code>.',
+  voiceTooLong: 'That voice note is too long. Keep it under a minute, or type the amount.',
+  voiceEmpty: 'I could not hear that. Try again, or type it — for example <code>80 taxi</code>.',
   unauthorized: 'I could not verify this request.',
   internalError: 'Something went wrong. Please try again.',
   languageSet: 'Language set to English.',
@@ -253,6 +259,9 @@ const am: Record<MessageKey, string> = {
   aiUnavailable: 'AI አይሰራም። <code>300 food</code> ይጻፉ።',
   aiQuotaExceeded:
     'ለዛሬ <b>{limit}</b> ነፃ AI መልእክቶች ጨርሰዋል — ነገ እንደገና ይጀምራል። 💡 እንደ <code>80 taxi</code> ወይም <code>Abebe 2000</code> ባሉ አጭር መንገዶች መመዝገብ ይችላሉ።\n\nበሙሉ ዓረፍተ ነገር ያለ ገደብ ማውራት ይፈልጋሉ? ላልተገደበ AI ወደ ፕሪሚየም ይሻሻሉ።',
+  voiceUnavailable: 'የድምጽ መልእክት AI ቁልፍ ይፈልጋል። ይጻፉ፦ <code>80 taxi</code>',
+  voiceTooLong: 'ድምጹ ረጅም ነው። ከአንድ ደቂቃ በታች ይሁን፣ ወይም ይጻፉ።',
+  voiceEmpty: 'መስማት አልቻልኩም። እንደገና ይሞክሩ ወይም ይጻፉ።',
   unauthorized: 'ጥያቄውን ማረጋገጥ አልተቻለም።',
   internalError: 'ችግር ተፈጥሯል። እንደገና ይሞክሩ።',
   languageSet: 'ቋንቋ ወደ አማርኛ ተቀይሯል።',

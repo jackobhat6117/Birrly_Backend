@@ -19,8 +19,9 @@ import type { UserService } from '@/modules/users/user.service';
 import type { FeedbackService } from '@/modules/feedback/feedback.service';
 import type { StructuredCommand } from '@/modules/ai/ai.types';
 import type { ConversationStore } from '@/integrations/telegram/conversation.store';
+import type { SpeechTranscriber } from '@/integrations/speech/speech.transcriber';
 import type { TelegramBotAdapter } from '@/integrations/telegram/telegram-bot.adapter';
-import type { TelegramUpdate } from '@/integrations/telegram/telegram.types';
+import type { TelegramUpdate, TelegramVoice } from '@/integrations/telegram/telegram.types';
 import {
   confirmKeyboard,
   escapeHtml,
@@ -64,6 +65,7 @@ export class TelegramUpdateHandler {
     private readonly feedback: FeedbackService,
     private readonly aiInteractions: AiInteractionService,
     private readonly freeAiDailyLimit: number,
+    private readonly speech: SpeechTranscriber,
   ) {}
 
   async handle(update: TelegramUpdate): Promise<void> {
@@ -77,7 +79,8 @@ export class TelegramUpdateHandler {
       }
 
       const message = update.message;
-      if (!message?.from || !message.text) {
+      const voice = message?.voice ?? message?.audio;
+      if (!message?.from || (!message.text && !voice)) {
         return;
       }
 
@@ -90,13 +93,18 @@ export class TelegramUpdateHandler {
       });
       language = user.language;
 
-      const slash = parseSlashCommand(message.text);
+      if (voice) {
+        await this.handleVoice(message.chat.id, user, voice);
+        return;
+      }
+
+      const slash = parseSlashCommand(message.text ?? '');
       if (slash) {
         await this.handleSlashCommand(message.chat.id, user, slash.command, slash.args);
         return;
       }
 
-      const text = message.text.trim();
+      const text = (message.text ?? '').trim();
       const pending = await this.conversations.get(user.id);
       if (pending?.awaiting === 'monthlyIncome') {
         const captured = await this.captureOnboardingIncome(message.chat.id, user, text);
@@ -178,6 +186,41 @@ export class TelegramUpdateHandler {
       parseMode: 'HTML',
       replyMarkup: startKeyboard(user.language),
     });
+  }
+
+  private async handleVoice(chatId: number, user: AuthenticatedUser, voice: TelegramVoice): Promise<void> {
+    const maxSeconds = 60;
+    const maxBytes = 8 * 1024 * 1024;
+    if (voice.duration > maxSeconds || (voice.file_size ?? 0) > maxBytes) {
+      await this.telegram.sendMessage({
+        chatId,
+        text: t(user.language, 'voiceTooLong'),
+        parseMode: 'HTML',
+      });
+      return;
+    }
+    if (!this.speech.isEnabled()) {
+      await this.telegram.sendMessage({
+        chatId,
+        text: t(user.language, 'voiceUnavailable'),
+        parseMode: 'HTML',
+      });
+      return;
+    }
+
+    const audio = await this.telegram.downloadFile(voice.file_id);
+    const transcript = await this.speech.transcribe(audio, voice.mime_type ?? 'audio/ogg');
+    if (!transcript) {
+      await this.telegram.sendMessage({
+        chatId,
+        text: t(user.language, 'voiceEmpty'),
+        parseMode: 'HTML',
+      });
+      return;
+    }
+
+    logger.info({ userId: user.id, chars: transcript.length }, 'Transcribed Telegram voice note');
+    await this.handleNaturalLanguage(chatId, user, transcript);
   }
 
   private async handleNaturalLanguage(

@@ -88,6 +88,20 @@ export class TelegramBotAdapter {
     });
   }
 
+  async downloadFile(fileId: string): Promise<Buffer> {
+    const body = await this.callJson<{ file_path?: string }>('getFile', { file_id: fileId });
+    const filePath = body.result?.file_path;
+    if (!body.ok || !filePath) {
+      throw new AppError(ERROR_CODE.INTERNAL, 'Failed to download Telegram voice note.', 502);
+    }
+
+    const response = await fetch(`https://api.telegram.org/file/bot${this.botToken}/${filePath}`);
+    if (!response.ok) {
+      throw new AppError(ERROR_CODE.INTERNAL, 'Failed to download Telegram voice note.', 502);
+    }
+    return Buffer.from(await response.arrayBuffer());
+  }
+
   private async call(method: string, payload: Record<string, unknown>): Promise<void> {
     if (!this.isConfigured()) {
       logger.warn({ method }, 'Telegram bot token is not configured');
@@ -105,6 +119,22 @@ export class TelegramBotAdapter {
       logger.error({ method, description: body.description }, 'Telegram API call failed');
       throw new AppError(ERROR_CODE.INTERNAL, 'Failed to send Telegram message.', 502);
     }
+  }
+
+  private async callJson<T>(
+    method: string,
+    payload: Record<string, unknown>,
+  ): Promise<{ ok: boolean; description?: string; result?: T }> {
+    if (!this.isConfigured()) {
+      throw new AppError(ERROR_CODE.INTERNAL, 'Telegram is not configured.', 503);
+    }
+
+    const response = await fetch(`https://api.telegram.org/bot${this.botToken}/${method}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return (await response.json()) as { ok: boolean; description?: string; result?: T };
   }
 }
 

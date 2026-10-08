@@ -24,6 +24,7 @@ const envSchema = z.object({
   // Optional second provider. Used when Gemini returns 429/503, or alone if Gemini has no key.
   GROQ_API_KEY: z.string().default(''),
   GROQ_MODEL: z.string().default('openai/gpt-oss-20b'),
+  GROQ_WHISPER_MODEL: z.string().default('whisper-large-v3-turbo'),
   DEV_AUTH_ENABLED: z
     .string()
     .default('false')

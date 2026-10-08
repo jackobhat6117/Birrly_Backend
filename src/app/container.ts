@@ -1,6 +1,7 @@
 import { prisma } from '@/database/prisma';
 import { redis } from '@/database/redis';
 import { createLlmProvider, describeLlm } from '@/integrations/llm/llm.provider';
+import { SpeechTranscriber } from '@/integrations/speech/speech.transcriber';
 import { config } from '@/app/config';
 import { ConversationStore } from '@/integrations/telegram/conversation.store';
 import { telegramBotAdapter } from '@/integrations/telegram/telegram-bot.adapter';
@@ -197,6 +198,12 @@ export function createContainer() {
     userContextService,
   );
   const conversations = new ConversationStore(redis);
+  const speech = new SpeechTranscriber({
+    groqApiKey: config.llm.groqApiKey,
+    whisperModel: config.llm.whisperModel,
+    geminiApiKey: config.llm.provider === 'gemini' ? config.llm.apiKey : '',
+    geminiModel: config.llm.model,
+  });
   const telegramHandler = new TelegramUpdateHandler(
     userService,
     aiParse,
@@ -216,6 +223,7 @@ export function createContainer() {
     feedbackService,
     aiInteractionService,
     config.ai.dailyLimit,
+    speech,
   );
   const telegramIdempotency = new TelegramIdempotencyStore(prisma);
 
