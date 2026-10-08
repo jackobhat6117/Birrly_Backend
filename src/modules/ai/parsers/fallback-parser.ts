@@ -8,6 +8,11 @@ function normalizeAmount(raw: string): string {
   return raw.replace(',', '.');
 }
 
+function intentForCategory(slug: string): 'CREATE_EXPENSE' | 'CREATE_INCOME' {
+  const kind = SYSTEM_CATEGORIES.find((category) => category.slug === slug)?.kind;
+  return kind === 'INCOME' ? 'CREATE_INCOME' : 'CREATE_EXPENSE';
+}
+
 function resolveCategory(text: string | undefined): string | undefined {
   if (!text) return undefined;
   const needle = text.toLowerCase().trim();
@@ -287,8 +292,9 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
   if (shorthand?.[1] && shorthand[2]) {
     const description = shorthand[2].replace(new RegExp(`\\s*${CURRENCY}\\s*$`, 'i'), '').trim();
     const categorySlug = resolveCategory(description);
+    const intent = categorySlug ? intentForCategory(categorySlug) : 'CREATE_EXPENSE';
     return command({
-      intent: 'CREATE_EXPENSE',
+      intent,
       amount: normalizeAmount(shorthand[1]),
       currency: input.currency,
       categorySlug,
@@ -296,6 +302,24 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
       confidence: categorySlug ? 0.75 : 0.5,
       missingFields: categorySlug ? [] : ['categorySlug'],
     });
+  }
+
+  // Same shorthand with the words flipped: "taxi 80", "ታክሲ 80 birr", "salary 40000".
+  // Only when the words are a known category, so "Abebe 2000" stays a debt.
+  const categoryFirst = text.match(new RegExp(`^(.+?)\\s+${AMOUNT}\\s*${CURRENCY}\\s*$`, 'i'));
+  if (categoryFirst?.[1] && categoryFirst[2]) {
+    const description = categoryFirst[1].trim();
+    const categorySlug = resolveCategory(description);
+    if (categorySlug) {
+      return command({
+        intent: intentForCategory(categorySlug),
+        amount: normalizeAmount(categoryFirst[2]),
+        currency: input.currency,
+        categorySlug,
+        description,
+        confidence: 0.75,
+      });
+    }
   }
 
   const personDebt = text.match(

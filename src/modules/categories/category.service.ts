@@ -4,6 +4,7 @@ import { AppError, ConflictError, ERROR_CODE } from '@/shared/errors/app-error';
 import type { AuditService } from '@/modules/audit/audit.service';
 import type { CategoryRepository } from '@/modules/categories/category.repository';
 import { FALLBACK_CATEGORY_SLUG } from '@/shared/constants/categories';
+import { logger } from '@/shared/logger/logger';
 import { slugifyCategory } from '@/shared/utils/slug';
 
 export class CategoryService {
@@ -61,10 +62,15 @@ export class CategoryService {
 
     if (input.categorySlug) {
       const category = await this.categories.findBySlug(input.categorySlug, userId, type);
-      if (!category) {
-        throw new AppError(ERROR_CODE.INVALID_CATEGORY, 'Category was not found.', 400);
+      if (category) {
+        return category;
       }
-      return category;
+      // A guessed slug that is not seeded must not block the log. The amount
+      // lands in Other and can be recategorized later.
+      logger.warn(
+        { userId, slug: input.categorySlug, type },
+        'Category slug was not found; using the fallback category',
+      );
     }
 
     // No category supplied: fall back to the system "Other" bucket for this type

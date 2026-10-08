@@ -22,6 +22,17 @@ export class TransactionRepository {
     });
   }
 
+  /**
+   * The unique key includes soft-deleted rows. Free it so a new log of the same
+   * expense can insert after the user deleted the previous one.
+   */
+  async releaseDeletedIdempotencyKey(userId: string, idempotencyKey: string): Promise<void> {
+    await this.db.transaction.updateMany({
+      where: { userId, idempotencyKey, deletedAt: { not: null } },
+      data: { idempotencyKey: null },
+    });
+  }
+
   async listForUser(userId: string, query: ListTransactionsQuery): Promise<{ rows: Transaction[]; total: number }> {
     const where: Prisma.TransactionWhereInput = {
       userId,

@@ -34,7 +34,7 @@ export class TransactionService {
       }
     }
 
-    const account = await this.accounts.resolveForUser(userId, input.accountId);
+    const account = await this.accounts.resolveForUser(userId, input.accountId, input.currency ?? currency);
     const category = await this.categories.resolve(
       userId,
       { categoryId: input.categoryId, categorySlug: input.categorySlug },
@@ -45,43 +45,55 @@ export class TransactionService {
       ? parseDateInput(input.transactionDate, timezone)
       : parseDateInput('today', timezone);
 
+    const data: Prisma.TransactionCreateInput = {
+      user: { connect: { id: userId } },
+      account: { connect: { id: account.id } },
+      category: { connect: { id: category.id } },
+      type: input.type,
+      amount,
+      currency: input.currency ?? currency,
+      description: input.description,
+      transactionDate,
+      source: input.source ?? 'API',
+      idempotencyKey: input.idempotencyKey,
+      ...(input.aiInteractionId ? { aiInteractionId: input.aiInteractionId } : {}),
+    };
+
     try {
-      const created = await this.transactions.create({
-        user: { connect: { id: userId } },
-        account: { connect: { id: account.id } },
-        category: { connect: { id: category.id } },
-        type: input.type,
-        amount,
-        currency: input.currency ?? currency,
-        description: input.description,
-        transactionDate,
-        source: input.source ?? 'API',
-        idempotencyKey: input.idempotencyKey,
-        ...(input.aiInteractionId ? { aiInteractionId: input.aiInteractionId } : {}),
-      });
-
-      await this.audit.record({
-        userId,
-        action: 'TRANSACTION_CREATED',
-        entityType: 'transaction',
-        entityId: created.id,
-        metadata: {
-          type: created.type,
-          amount: formatMoney(amount),
-          currency: created.currency,
-        },
-      });
-
-      return toTransactionDto(created);
+      return await this.persistCreated(userId, amount, data);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002' && input.idempotencyKey) {
         const existing = await this.transactions.findByIdempotencyKey(userId, input.idempotencyKey);
         if (existing) {
           return toTransactionDto(existing);
         }
+        await this.transactions.releaseDeletedIdempotencyKey(userId, input.idempotencyKey);
+        return this.persistCreated(userId, amount, data);
       }
       throw error;
     }
+  }
+
+  private async persistCreated(
+    userId: string,
+    amount: ReturnType<typeof assertPositiveMoney>,
+    data: Prisma.TransactionCreateInput,
+  ): Promise<TransactionDto> {
+    const created = await this.transactions.create(data);
+
+    await this.audit.record({
+      userId,
+      action: 'TRANSACTION_CREATED',
+      entityType: 'transaction',
+      entityId: created.id,
+      metadata: {
+        type: created.type,
+        amount: formatMoney(amount),
+        currency: created.currency,
+      },
+    });
+
+    return toTransactionDto(created);
   }
 
   async list(userId: string, query: ListTransactionsQuery) {

@@ -5,6 +5,10 @@ import type { LLMProvider } from '@/integrations/llm/llm.provider';
 
 const DEFAULT_GEMINI_MODEL = 'gemini-3.6-flash';
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+/** Chat parsing is a short JSON classification. Don't make the user wait on a hung call. */
+const PARSE_TIMEOUT_MS = 8_000;
+/** Coach and report copy can think a little longer than a chat command. */
+const GENERATE_TIMEOUT_MS = 20_000;
 
 type GeminiGenerateResponse = {
   candidates?: Array<{
@@ -49,6 +53,31 @@ User message:
 ${input.text}`;
 }
 
+/**
+ * Gemini 3.6 Flash thinks at "medium" by default, which is why a one-line
+ * expense can sit for many seconds. Classification should stay at "minimal".
+ * Older Gemini models reject thinkingLevel, so only send it for 3.x.
+ * temperature is omitted: Gemini 3 ignores it and later models reject it.
+ */
+export function generationConfig(model: string, purpose: 'parse' | 'generate') {
+  const config: {
+    responseMimeType: 'application/json';
+    maxOutputTokens: number;
+    thinkingConfig?: { thinkingLevel: 'minimal' | 'low' };
+  } = {
+    responseMimeType: 'application/json',
+    maxOutputTokens: purpose === 'parse' ? 1024 : 2048,
+  };
+
+  if (model.startsWith('gemini-3')) {
+    config.thinkingConfig = {
+      thinkingLevel: purpose === 'parse' ? 'minimal' : 'low',
+    };
+  }
+
+  return config;
+}
+
 export function extractJsonObject(text: string): unknown {
   const trimmed = text.trim();
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
@@ -70,7 +99,10 @@ export class GeminiLlmProvider implements LLMProvider {
   }
 
   async parse(input: ParseTextInput): Promise<StructuredCommand> {
-    const text = await this.callGemini(buildParserPrompt(input));
+    const text = await this.callGemini(buildParserPrompt(input), {
+      purpose: 'parse',
+      timeoutMs: PARSE_TIMEOUT_MS,
+    });
     const parsed = extractJsonObject(text) as Omit<StructuredCommand, 'source'>;
     return {
       ...parsed,
@@ -81,11 +113,17 @@ export class GeminiLlmProvider implements LLMProvider {
   }
 
   async generateJson(prompt: string): Promise<unknown> {
-    const text = await this.callGemini(prompt);
+    const text = await this.callGemini(prompt, {
+      purpose: 'generate',
+      timeoutMs: GENERATE_TIMEOUT_MS,
+    });
     return extractJsonObject(text);
   }
 
-  private async callGemini(prompt: string): Promise<string> {
+  private async callGemini(
+    prompt: string,
+    options: { purpose: 'parse' | 'generate'; timeoutMs: number },
+  ): Promise<string> {
     if (!this.isEnabled()) {
       throw new Error('Gemini LLM is not configured.');
     }
@@ -99,12 +137,9 @@ export class GeminiLlmProvider implements LLMProvider {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.1,
-          responseMimeType: 'application/json',
-        },
+        generationConfig: generationConfig(model, options.purpose),
       }),
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(options.timeoutMs),
     });
 
     const payload = (await response.json()) as GeminiGenerateResponse;

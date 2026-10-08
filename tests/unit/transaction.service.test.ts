@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { describe, expect, it, vi } from 'vitest';
 import { TransactionService } from '@/modules/transactions/transaction.service';
 import { ERROR_CODE } from '@/shared/errors/app-error';
@@ -17,6 +18,7 @@ const audit = {
 const transactions = {
   create: vi.fn(),
   findByIdempotencyKey: vi.fn(),
+  releaseDeletedIdempotencyKey: vi.fn(),
   findByIdForUser: vi.fn(),
   listForUser: vi.fn(),
   update: vi.fn(),
@@ -86,6 +88,44 @@ describe('TransactionService', () => {
 
     expect(result.id).toBe('tx-existing');
     expect(transactions.create).not.toHaveBeenCalled();
+  });
+
+  it('clears a soft-deleted idempotency key and saves the new expense', async () => {
+    accounts.resolveForUser.mockResolvedValue({ id: 'acc-1' });
+    categories.resolve.mockResolvedValue({ id: 'cat-1', kind: 'EXPENSE' });
+    transactions.findByIdempotencyKey.mockResolvedValue(null);
+    transactions.releaseDeletedIdempotencyKey.mockResolvedValue(undefined);
+    transactions.create
+      .mockRejectedValueOnce(
+        new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+          code: 'P2002',
+          clientVersion: 'test',
+        }),
+      )
+      .mockResolvedValueOnce({
+        id: 'tx-new',
+        accountId: 'acc-1',
+        categoryId: 'cat-1',
+        type: 'EXPENSE',
+        amount: { toString: () => '80.00' },
+        currency: 'ETB',
+        description: 'taxi',
+        transactionDate: new Date('2026-10-08T00:00:00.000Z'),
+        source: 'TELEGRAM',
+        createdAt: new Date('2026-10-08T00:00:00.000Z'),
+      });
+
+    const result = await service().create('user-1', 'ETB', 'Africa/Addis_Ababa', {
+      type: 'EXPENSE',
+      amount: '80',
+      categorySlug: 'transport',
+      description: 'taxi',
+      source: 'TELEGRAM',
+      idempotencyKey: 'telegram:abc',
+    });
+
+    expect(transactions.releaseDeletedIdempotencyKey).toHaveBeenCalledWith('user-1', 'telegram:abc');
+    expect(result.id).toBe('tx-new');
   });
 
   it('rejects unauthorized access to another user transaction', async () => {

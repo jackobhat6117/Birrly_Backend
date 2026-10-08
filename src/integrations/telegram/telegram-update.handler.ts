@@ -843,8 +843,9 @@ export class TelegramUpdateHandler {
       return;
     }
 
+    let confirmation: string | null = null;
     try {
-      const confirmation = await this.commit(user, pending.command, pending.aiInteractionId);
+      confirmation = await this.commit(user, pending.command, token, pending.aiInteractionId);
       // Confirmed as-is → a positive label (predicted === final).
       await this.aiInteractions.recordOutcome(
         pending.aiInteractionId,
@@ -853,18 +854,35 @@ export class TelegramUpdateHandler {
         pending.command,
       );
       await this.conversations.clear(user.id);
-      await this.telegram.answerCallbackQuery(callback.id, t(user.language, 'callbackSaved'));
+      try {
+        await this.telegram.answerCallbackQuery(callback.id, t(user.language, 'callbackSaved'));
+      } catch (notifyError) {
+        // The row is already saved. An expired callback button must not look like a failed save.
+        logger.warn({ err: notifyError, userId: user.id }, 'Telegram callback answer failed after save');
+      }
       await this.telegram.sendMessage({
         chatId: callback.message.chat.id,
         text: confirmation,
         parseMode: 'HTML',
       });
     } catch (error) {
+      if (confirmation) {
+        logger.error({ err: error, userId: user.id }, 'Saved Telegram command but failed to report it');
+        await this.telegram.sendMessage({
+          chatId: callback.message.chat.id,
+          text: confirmation,
+          parseMode: 'HTML',
+        });
+        return;
+      }
+
       logger.error({ err: error, userId: user.id }, 'Failed to commit Telegram command');
       const message =
         error instanceof AppError && error.code === ERROR_CODE.SUBSCRIPTION_REQUIRED
           ? t(user.language, 'planLimitReached')
-          : t(user.language, 'internalError');
+          : error instanceof AppError
+            ? escapeHtml(error.message)
+            : t(user.language, 'internalError');
       await this.telegram.answerCallbackQuery(callback.id, t(user.language, 'callbackError'));
       await this.telegram.sendMessage({
         chatId: callback.message.chat.id,
@@ -877,9 +895,12 @@ export class TelegramUpdateHandler {
   private async commit(
     user: AuthenticatedUser,
     command: StructuredCommand,
+    confirmationToken: string,
     aiInteractionId?: string,
   ): Promise<string> {
-    const idempotencyKey = `telegram:${command.intent}:${command.amount}:${command.categorySlug}:${command.personName}:${command.date}:${command.reminderTitle}:${command.description}`;
+    // One key per Confirm tap. A second "80 taxi" is a new expense; tapping the
+    // same button twice (Telegram retry) still returns the row already saved.
+    const idempotencyKey = `telegram:${confirmationToken}`;
 
     if (command.intent === 'CREATE_EXPENSE' || command.intent === 'CREATE_INCOME') {
       const saved = await this.transactions.create(user.id, user.currency, user.timezone, {

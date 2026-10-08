@@ -16,7 +16,7 @@ export class AccountService {
     return account;
   }
 
-  async resolveForUser(userId: string, accountId?: string) {
+  async resolveForUser(userId: string, accountId?: string, currency = 'ETB') {
     if (accountId) {
       return this.getOwned(accountId, userId);
     }
@@ -27,9 +27,26 @@ export class AccountService {
     // No account is flagged default (data drift, archived default, etc.). Fall
     // back to any usable account rather than failing the core logging path.
     const [firstAvailable] = await this.accounts.listForUser(userId);
-    if (!firstAvailable) {
-      throw new NotFoundError(ERROR_CODE.ACCOUNT_NOT_FOUND, 'No account was found for this user.');
+    if (firstAvailable) {
+      return firstAvailable;
     }
-    return firstAvailable;
+
+    // Users created before default accounts existed, or whose accounts were all
+    // archived, still need a place to log. Create the standard set, then revive
+    // an archived one if the names were already taken.
+    await this.accounts.ensureDefaults(userId, currency);
+    const created =
+      (await this.accounts.findDefaultForUser(userId)) ??
+      (await this.accounts.listForUser(userId))[0];
+    if (created) {
+      return created;
+    }
+
+    const archived = await this.accounts.findAnyForUser(userId);
+    if (archived) {
+      return this.accounts.unarchive(archived.id);
+    }
+
+    throw new NotFoundError(ERROR_CODE.ACCOUNT_NOT_FOUND, 'No account was found for this user.');
   }
 }

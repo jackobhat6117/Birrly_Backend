@@ -44,6 +44,12 @@ export const PARSE_CASES: ParseCase[] = [
     expect: { intent: 'CREATE_EXPENSE', amount: '80', categorySlug: 'transport', missingFields: [] },
   },
   {
+    id: 'exp-en-shorthand-category-first',
+    group: 'expense',
+    input: etb('taxi 80'),
+    expect: { intent: 'CREATE_EXPENSE', amount: '80', categorySlug: 'transport', missingFields: [] },
+  },
+  {
     id: 'exp-en-missing-category',
     group: 'expense',
     input: etb('I spent 500'),

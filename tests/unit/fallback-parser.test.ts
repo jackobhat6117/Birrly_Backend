@@ -62,6 +62,29 @@ describe('fallback parser', () => {
     expect(amharic.categorySlug).toBe('transport');
   });
 
+  it('parses category-first shorthand such as taxi 80', () => {
+    const taxi = parseWithFallback({ text: 'taxi 80', language: 'en', currency: 'ETB' });
+    expect(taxi.intent).toBe('CREATE_EXPENSE');
+    expect(taxi.amount).toBe('80');
+    expect(taxi.categorySlug).toBe('transport');
+    expect(taxi.confidence).toBeGreaterThanOrEqual(0.7);
+    expect(taxi.missingFields).toEqual([]);
+
+    const withCurrency = parseWithFallback({ text: 'taxi 80 birr', language: 'en', currency: 'ETB' });
+    expect(withCurrency.intent).toBe('CREATE_EXPENSE');
+    expect(withCurrency.amount).toBe('80');
+    expect(withCurrency.categorySlug).toBe('transport');
+
+    const amharic = parseWithFallback({ text: 'ታክሲ 80', language: 'am', currency: 'ETB' });
+    expect(amharic.intent).toBe('CREATE_EXPENSE');
+    expect(amharic.categorySlug).toBe('transport');
+
+    const lunch = parseWithFallback({ text: 'lunch 350', language: 'en', currency: 'ETB' });
+    expect(lunch.intent).toBe('CREATE_EXPENSE');
+    expect(lunch.amount).toBe('350');
+    expect(lunch.categorySlug).toBe('food');
+  });
+
   it('parses salary shorthand as income', () => {
     const result = parseWithFallback({ text: '40000 salary', language: 'en', currency: 'ETB' });
     expect(result.intent).toBe('CREATE_INCOME');

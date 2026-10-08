@@ -16,7 +16,7 @@ English examples:
 - "this month summary" -> QUERY_REPORT
 - "how much did I spend on food" -> QUERY_SPENDING (categorySlug: food)
 - "I spent 350 on lunch today" -> CREATE_EXPENSE
-- "80 taxi" -> CREATE_EXPENSE
+- "80 taxi" / "taxi 80" / "taxi 80 birr" -> CREATE_EXPENSE
 - "40000 salary" / "got paid 40000" -> CREATE_INCOME
 - "Abebe owes me 2000" -> CREATE_DEBT (debtType: OWED_TO_ME)
 - "I owe Sara 500" -> CREATE_DEBT (debtType: I_OWE)
