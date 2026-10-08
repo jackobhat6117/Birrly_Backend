@@ -204,7 +204,7 @@ export class GroupSavingsService {
       throw new NotFoundError(ERROR_CODE.GROUP_SAVINGS_NOT_FOUND, 'Group savings goal not found.');
     }
 
-    let member = row.members.find((m) => m.userId === userId);
+    const member = row.members.find((m) => m.userId === userId);
     let memberId: string;
     if (!member) {
       if (row.createdById === userId) {
@@ -419,7 +419,7 @@ export class GroupSavingsService {
 
   private toSummary(row: GroupSavingsWithRelations, currentUserId: string): GroupSavingsSummaryDto {
     const dto = this.toDto(row, currentUserId);
-    const { recentContributions, ...summary } = dto;
+    const { recentContributions: _recentContributions, ...summary } = dto;
     return summary;
   }
 }
