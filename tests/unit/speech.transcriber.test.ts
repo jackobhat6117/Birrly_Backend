@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { SpeechTranscriber } from '@/integrations/speech/speech.transcriber';
 
 const base = {
+  hasabApiKey: '',
+  hasabLanguage: 'amh',
   addisApiKey: '',
   addisSttBackend: 'standard' as const,
   groqApiKey: '',
@@ -11,6 +13,26 @@ const base = {
 };
 
 describe('SpeechTranscriber', () => {
+  it('prefers Hasab over Addis when a Hasab key is set', async () => {
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      expect(String(url)).toBe('https://api.hasab.ai/api/v1/upload-audio');
+      const headers = init?.headers as Record<string, string>;
+      expect(headers.Authorization).toBe('Bearer hasab-key');
+      expect(init?.body).toBeInstanceOf(FormData);
+      return { ok: true, status: 200, json: async () => ({ transcription: 'ሰማንያ ታክሲ' }) };
+    });
+
+    const text = await new SpeechTranscriber({
+      ...base,
+      hasabApiKey: 'hasab-key',
+      addisApiKey: 'addis-key',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    }).transcribe(Buffer.from('audio'), 'audio/wav');
+
+    expect(text).toBe('ሰማንያ ታክሲ');
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
   it('prefers Addis Scribe for Amharic voice notes', async () => {
     const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
       expect(String(url)).toContain('api.addisassistant.com/api/v1/scribe/transcribe');

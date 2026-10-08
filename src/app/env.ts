@@ -28,6 +28,9 @@ const envSchema = z.object({
   // Amharic speech-to-text (Addis Scribe). Preferred over Groq/Gemini when set.
   ADDIS_API_KEY: z.string().default(''),
   ADDIS_STT_BACKEND: z.enum(['standard', 'turbo']).default('standard'),
+  // Preferred speech-to-text when set. Amharic code is amh; use auto for mixed speech.
+  HASAB_API_KEY: z.string().default(''),
+  HASAB_STT_LANGUAGE: z.string().default('amh'),
   DEV_AUTH_ENABLED: z
     .string()
     .default('false')

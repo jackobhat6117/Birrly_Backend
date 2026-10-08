@@ -2,6 +2,70 @@ import { describe, expect, it } from 'vitest';
 import { parseWithFallback } from '@/modules/ai/parsers/fallback-parser';
 
 describe('fallback parser', () => {
+  it('logs a spoken Amharic expense', () => {
+    const result = parseWithFallback({
+      text: 'ሰማንያ ብር ታክሲ',
+      language: 'am',
+      currency: 'ETB',
+    });
+
+    expect(result.intent).toBe('CREATE_EXPENSE');
+    expect(result.amount).toBe('80');
+    expect(result.categorySlug).toBe('transport');
+  });
+
+  it('logs spoken income, debt, budget, and savings without saying birr', () => {
+    const lunch = parseWithFallback({ text: 'ምሳ ሰማንያ', language: 'am', currency: 'ETB' });
+    expect(lunch.intent).toBe('CREATE_EXPENSE');
+    expect(lunch.amount).toBe('80');
+    expect(lunch.categorySlug).toBe('food');
+
+    const salary = parseWithFallback({ text: 'ደመወዝ አርባ ሺህ', language: 'am', currency: 'ETB' });
+    expect(salary.intent).toBe('CREATE_INCOME');
+    expect(salary.amount).toBe('40000');
+    expect(salary.categorySlug).toBe('salary');
+
+    const debt = parseWithFallback({ text: 'አበበ ሁለት ሺህ', language: 'am', currency: 'ETB' });
+    expect(debt.intent).toBe('CREATE_DEBT');
+    expect(debt.personName).toBe('አበበ');
+    expect(debt.amount).toBe('2000');
+
+    const paid = parseWithFallback({ text: 'አበበ ከፈለኝ አምስት መቶ', language: 'am', currency: 'ETB' });
+    expect(paid.intent).toBe('RECORD_DEBT_PAYMENT');
+    expect(paid.personName).toBe('አበበ');
+    expect(paid.amount).toBe('500');
+
+    const budget = parseWithFallback({ text: 'ባጀት አምስት ሺህ ምሳ', language: 'am', currency: 'ETB' });
+    expect(budget.intent).toBe('CREATE_BUDGET');
+    expect(budget.amount).toBe('5000');
+    expect(budget.categorySlug).toBe('food');
+
+    const savings = parseWithFallback({ text: 'ለስልክ አስር ሺህ ቁጠባ', language: 'am', currency: 'ETB' });
+    expect(savings.intent).toBe('CREATE_SAVINGS_GOAL');
+    expect(savings.amount).toBe('10000');
+    expect(savings.description).toBe('ስልክ');
+  });
+
+  it('logs a dollar amount when the voice note says dollar', () => {
+    const result = parseWithFallback({ text: 'eighty dollars taxi', language: 'en', currency: 'ETB' });
+    expect(result.intent).toBe('CREATE_EXPENSE');
+    expect(result.amount).toBe('80');
+    expect(result.currency).toBe('USD');
+    expect(result.categorySlug).toBe('transport');
+  });
+
+  it('logs a spoken English expense', () => {
+    const result = parseWithFallback({
+      text: 'eighty birr taxi',
+      language: 'en',
+      currency: 'ETB',
+    });
+
+    expect(result.intent).toBe('CREATE_EXPENSE');
+    expect(result.amount).toBe('80');
+    expect(result.categorySlug).toBe('transport');
+  });
+
   it('parses an expense in natural language', () => {
     const result = parseWithFallback({
       text: 'I spent 350 birr on lunch',

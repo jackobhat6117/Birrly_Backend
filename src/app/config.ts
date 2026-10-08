@@ -42,6 +42,8 @@ export const config = {
     whisperModel: env.GROQ_WHISPER_MODEL,
     addisApiKey: env.ADDIS_API_KEY,
     addisSttBackend: env.ADDIS_STT_BACKEND,
+    hasabApiKey: env.HASAB_API_KEY,
+    hasabLanguage: env.HASAB_STT_LANGUAGE,
   },
   corsOrigins: env.CORS_ORIGIN
     ? env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)

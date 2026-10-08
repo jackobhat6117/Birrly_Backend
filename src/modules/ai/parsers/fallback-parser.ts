@@ -1,5 +1,6 @@
 import { CATEGORY_ALIASES, SYSTEM_CATEGORIES } from '@/shared/constants/categories';
 import type { ParseTextInput, StructuredCommand } from '@/modules/ai/ai.types';
+import { replaceSpokenAmounts } from '@/modules/ai/parsers/spoken-amounts';
 
 const AMOUNT = '(\\d{1,12}(?:[.,]\\d{1,2})?)';
 const CURRENCY = '(?:birr|br|etb|ብር)?';
@@ -41,9 +42,157 @@ function command(
   };
 }
 
+function spokenCurrency(text: string, fallback: string): { text: string; currency: string } {
+  let currency = fallback;
+  if (/(?:ዶላር|dollars?|usd)/i.test(text)) currency = 'USD';
+  else if (/(?:ዩሮ|euros?)/i.test(text)) currency = 'EUR';
+  const cleaned = text
+    .replace(/(^|\s)(?:ብር|birr|br|etb|ዶላር|dollars?|usd|ዩሮ|euros?)(?=\s|$)/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return { text: cleaned, currency };
+}
+
 export function parseWithFallback(input: ParseTextInput): StructuredCommand {
-  const text = input.text.trim();
+  const spoken = spokenCurrency(replaceSpokenAmounts(input.text.trim()), input.currency);
+  const text = spoken.text;
+  const currency = spoken.currency;
   const lower = text.toLowerCase();
+
+  const paidMe = text.match(new RegExp(`^(.+?)\\s+ከፈለ(?:ኝ)?\\s+${AMOUNT}\\s*$`, 'u'));
+  if (paidMe?.[1] && paidMe[2] && !resolveCategory(paidMe[1])) {
+    return command({
+      intent: 'RECORD_DEBT_PAYMENT',
+      personName: paidMe[1].replace(/^ለ\s*/, '').trim(),
+      amount: normalizeAmount(paidMe[2]),
+      currency,
+      confidence: 0.84,
+    });
+  }
+
+  const paidThem = text.match(new RegExp(`^(?:ለ\\s*)?(.+?)\\s+ከፈልኩ\\s+${AMOUNT}\\s*$`, 'u'));
+  if (paidThem?.[1] && paidThem[2] && !resolveCategory(paidThem[1])) {
+    return command({
+      intent: 'RECORD_DEBT_PAYMENT',
+      personName: paidThem[1].trim(),
+      amount: normalizeAmount(paidThem[2]),
+      currency,
+      confidence: 0.84,
+    });
+  }
+
+  const amSpentLead = text.match(new RegExp(`^(?:ከፈልኩ|አወጣሁ|ገዛሁ|ወጪ)\\s+${AMOUNT}(?:\\s+(.*))?$`, 'u'));
+  const amSpentTrail = text.match(new RegExp(`^${AMOUNT}\\s+(?:ከፈልኩ|አወጣሁ|ገዛሁ)(?:\\s+(.*))?$`, 'u'));
+  const amSpent = amSpentLead ?? amSpentTrail;
+  if (amSpent?.[1]) {
+    const description = amSpent[2]?.trim() || undefined;
+    const categorySlug = resolveCategory(description);
+    return command({
+      intent: 'CREATE_EXPENSE',
+      amount: normalizeAmount(amSpent[1]),
+      currency,
+      categorySlug,
+      description,
+      confidence: categorySlug ? 0.84 : 0.7,
+      missingFields: categorySlug ? [] : ['categorySlug'],
+    });
+  }
+
+  const amIncomeLead = text.match(new RegExp(`^(?:ተቀበልኩ|ገባኝ|ደረሰኝ)\\s+${AMOUNT}(?:\\s+(.*))?$`, 'u'));
+  const amIncomeTrail = text.match(new RegExp(`^${AMOUNT}\\s+(?:ተቀበልኩ|ገባኝ|ደረሰኝ)(?:\\s+(.*))?$`, 'u'));
+  const amIncome = amIncomeLead ?? amIncomeTrail;
+  if (amIncome?.[1]) {
+    const description = amIncome[2]?.trim() || undefined;
+    return command({
+      intent: 'CREATE_INCOME',
+      amount: normalizeAmount(amIncome[1]),
+      currency,
+      categorySlug: resolveCategory(description) ?? 'other-income',
+      description,
+      confidence: 0.82,
+    });
+  }
+
+  const owesMe = text.match(new RegExp(`^(.+?)\\s+(?:ይበደረኛል|አበደረኝ)\\s+${AMOUNT}\\s*$`, 'u'));
+  if (owesMe?.[1] && owesMe[2]) {
+    return command({
+      intent: 'CREATE_DEBT',
+      personName: owesMe[1].trim(),
+      amount: normalizeAmount(owesMe[2]),
+      currency,
+      debtType: 'OWED_TO_ME',
+      confidence: 0.86,
+    });
+  }
+
+  const iOweAm = text.match(new RegExp(`^(?:ለ\\s*)?(.+?)\\s+(?:እዳ\\s*አለብኝ|አለብኝ)\\s+${AMOUNT}\\s*$`, 'u'));
+  if (iOweAm?.[1] && iOweAm[2] && !resolveCategory(iOweAm[1])) {
+    return command({
+      intent: 'CREATE_DEBT',
+      personName: iOweAm[1].trim(),
+      amount: normalizeAmount(iOweAm[2]),
+      currency,
+      debtType: 'I_OWE',
+      confidence: 0.84,
+    });
+  }
+
+  const amBudgetLead = text.match(new RegExp(`^(?:ባጀት|በጀት)\\s+${AMOUNT}\\s+(.+)$`, 'u'));
+  if (amBudgetLead?.[1] && amBudgetLead[2]) {
+    const categorySlug = resolveCategory(amBudgetLead[2].trim());
+    return command({
+      intent: 'CREATE_BUDGET',
+      amount: normalizeAmount(amBudgetLead[1]),
+      currency,
+      categorySlug,
+      confidence: categorySlug ? 0.84 : 0.7,
+      missingFields: categorySlug ? [] : ['categorySlug'],
+    });
+  }
+
+  const amBudgetTrail = text.match(new RegExp(`^(.+?)\\s+(?:ባጀት|በጀት)\\s+${AMOUNT}\\s*$`, 'u'));
+  if (amBudgetTrail?.[1] && amBudgetTrail[2]) {
+    const categorySlug = resolveCategory(amBudgetTrail[1].trim());
+    return command({
+      intent: 'CREATE_BUDGET',
+      amount: normalizeAmount(amBudgetTrail[2]),
+      currency,
+      categorySlug,
+      confidence: categorySlug ? 0.84 : 0.7,
+      missingFields: categorySlug ? [] : ['categorySlug'],
+    });
+  }
+
+  const amSaveLead = text.match(new RegExp(`^(?:ቁጠባ|ቆጥቤ|አስቀመጥኩ)\\s+${AMOUNT}\\s+(.+)$`, 'u'));
+  if (amSaveLead?.[1] && amSaveLead[2]) {
+    return command({
+      intent: 'CREATE_SAVINGS_GOAL',
+      amount: normalizeAmount(amSaveLead[1]),
+      currency,
+      description: amSaveLead[2].replace(/^ለ\s*/, '').trim(),
+      confidence: 0.82,
+    });
+  }
+
+  const amSaveTrail = text.match(new RegExp(`^(?:ለ\\s*)?(.+?)\\s+(?:${AMOUNT}\\s+)?(?:ቁጠባ|አስቀምጥ)\\s*${AMOUNT}?\\s*$`, 'u'));
+  if (amSaveTrail?.[1] && (amSaveTrail[2] || amSaveTrail[3])) {
+    return command({
+      intent: 'CREATE_SAVINGS_GOAL',
+      amount: normalizeAmount(amSaveTrail[2] ?? amSaveTrail[3] ?? '0'),
+      currency,
+      description: amSaveTrail[1].trim(),
+      confidence: 0.8,
+    });
+  }
+
+  if (/ስንት አወጣሁ|ወጪ ስንት|ምን ያህል ወጪ|ምን ያህል አወጣ/.test(text)) {
+    return command({
+      intent: 'QUERY_SPENDING',
+      categorySlug: resolveCategory(text),
+      currency,
+      confidence: 0.74,
+    });
+  }
 
   const debtPaidByPerson = text.match(
     new RegExp(`^(.+?)\\s+(?:paid|pay(?:ed)?|repaid)\\s+${AMOUNT}\\s*${CURRENCY}\\s*$`, 'i'),
@@ -53,7 +202,7 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
       intent: 'RECORD_DEBT_PAYMENT',
       personName: debtPaidByPerson[1].trim(),
       amount: normalizeAmount(debtPaidByPerson[2]),
-      currency: input.currency,
+      currency,
       confidence: 0.84,
     });
   }
@@ -66,7 +215,7 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
       intent: 'RECORD_DEBT_PAYMENT',
       personName: debtPaidToPerson[1].trim(),
       amount: normalizeAmount(debtPaidToPerson[2]),
-      currency: input.currency,
+      currency,
       confidence: 0.84,
     });
   }
@@ -84,7 +233,7 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
     return command({
       intent: 'CREATE_EXPENSE',
       amount: normalizeAmount(spent[1]),
-      currency: input.currency,
+      currency,
       categorySlug,
       description,
       confidence: categorySlug ? 0.86 : 0.6,
@@ -99,7 +248,7 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
     return command({
       intent: 'CREATE_INCOME',
       amount: normalizeAmount(salary[1] ?? salary[2] ?? '0'),
-      currency: input.currency,
+      currency,
       categorySlug: 'salary',
       description: 'Salary',
       confidence: 0.82,
@@ -118,7 +267,7 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
     return command({
       intent: 'CREATE_INCOME',
       amount: normalizeAmount(income[1]),
-      currency: input.currency,
+      currency,
       categorySlug,
       description,
       confidence: 0.8,
@@ -131,7 +280,7 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
       intent: 'CREATE_DEBT',
       personName: owedToMe[1].trim(),
       amount: normalizeAmount(owedToMe[2]),
-      currency: input.currency,
+      currency,
       debtType: 'OWED_TO_ME',
       confidence: 0.9,
     });
@@ -143,7 +292,7 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
       intent: 'CREATE_DEBT',
       personName: iOwe[1].trim(),
       amount: normalizeAmount(iOwe[2]),
-      currency: input.currency,
+      currency,
       debtType: 'I_OWE',
       confidence: 0.9,
     });
@@ -240,7 +389,7 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
     return command({
       intent: 'CREATE_BUDGET',
       amount: normalizeAmount(budgetLead[1]),
-      currency: input.currency,
+      currency,
       categorySlug,
       confidence: categorySlug ? 0.82 : 0.55,
       missingFields: categorySlug ? [] : ['categorySlug'],
@@ -255,7 +404,7 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
     return command({
       intent: 'CREATE_BUDGET',
       amount: normalizeAmount(budgetTrail[2]),
-      currency: input.currency,
+      currency,
       categorySlug,
       confidence: categorySlug ? 0.82 : 0.55,
       missingFields: categorySlug ? [] : ['categorySlug'],
@@ -269,7 +418,7 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
     return command({
       intent: 'CREATE_SAVINGS_GOAL',
       amount: normalizeAmount(savingsLead[1]),
-      currency: input.currency,
+      currency,
       description: savingsLead[2].trim(),
       confidence: 0.8,
     });
@@ -282,7 +431,7 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
     return command({
       intent: 'CREATE_SAVINGS_GOAL',
       amount: normalizeAmount(savingsTrail[2]),
-      currency: input.currency,
+      currency,
       description: savingsTrail[1].trim(),
       confidence: 0.8,
     });
@@ -296,7 +445,7 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
     return command({
       intent,
       amount: normalizeAmount(shorthand[1]),
-      currency: input.currency,
+      currency,
       categorySlug,
       description,
       confidence: categorySlug ? 0.75 : 0.5,
@@ -314,7 +463,7 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
       return command({
         intent: intentForCategory(categorySlug),
         amount: normalizeAmount(categoryFirst[2]),
-        currency: input.currency,
+        currency,
         categorySlug,
         description,
         confidence: 0.75,
@@ -332,7 +481,7 @@ export function parseWithFallback(input: ParseTextInput): StructuredCommand {
         intent: 'CREATE_DEBT',
         personName,
         amount: normalizeAmount(personDebt[2]),
-        currency: input.currency,
+        currency,
         debtType: 'OWED_TO_ME',
         confidence: 0.72,
       });

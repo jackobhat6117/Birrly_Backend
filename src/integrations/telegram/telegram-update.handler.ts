@@ -180,9 +180,12 @@ export class TelegramUpdateHandler {
   }
 
   private async sendNudge(chatId: number, user: AuthenticatedUser, text = ''): Promise<void> {
+    const heard = text.trim()
+      ? `${user.language === 'am' ? 'ሰማሁት' : 'I heard'}: <code>${escapeHtml(text.trim())}</code>\n\n`
+      : '';
     await this.telegram.sendMessage({
       chatId,
-      text: buildHelpfulNudge(user.language, text),
+      text: heard + buildHelpfulNudge(user.language, text),
       parseMode: 'HTML',
       replyMarkup: startKeyboard(user.language),
     });

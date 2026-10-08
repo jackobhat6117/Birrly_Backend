@@ -199,6 +199,8 @@ export function createContainer() {
   );
   const conversations = new ConversationStore(redis);
   const speech = new SpeechTranscriber({
+    hasabApiKey: config.llm.hasabApiKey,
+    hasabLanguage: config.llm.hasabLanguage,
     addisApiKey: config.llm.addisApiKey,
     addisSttBackend: config.llm.addisSttBackend,
     groqApiKey: config.llm.groqApiKey,
