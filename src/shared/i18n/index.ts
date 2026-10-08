@@ -73,7 +73,12 @@ export type MessageKey =
   | 'groupBudgetJoined'
   | 'groupBudgetLinked'
   | 'groupBudgetStatus'
-  | 'groupBudgetExpenseLogged';
+  | 'groupBudgetExpenseLogged'
+  | 'groupSavingsJoinNotFound'
+  | 'groupSavingsJoined'
+  | 'groupSavingsLinked'
+  | 'groupSavingsStatus'
+  | 'groupSavingsContributionLogged';
 
 const en: Record<MessageKey, string> = {
   welcome:
@@ -164,6 +169,13 @@ const en: Record<MessageKey, string> = {
     '📊 <b>{name}</b>\nBudget: <code>{amount} {currency}</code>\nSpent: <code>{spent} {currency}</code> ({percent}%)\nRemaining: <code>{remaining} {currency}</code>',
   groupBudgetExpenseLogged:
     '✓ <code>{amount} {currency}</code> logged by <b>{user}</b> for <b>{name}</b>.\nRemaining: <code>{remaining} {currency}</code>',
+  groupSavingsJoinNotFound: 'This Group Savings invite link is no longer valid or has expired.',
+  groupSavingsJoined: '✓ Joined <b>{name}</b>! You can now collaborate and save together in Birrly.',
+  groupSavingsLinked: '✓ This chat is now linked to <b>{name}</b>! Shared savings contributions logged here will count towards this goal.',
+  groupSavingsStatus:
+    '🎯 <b>{name}</b>\nTarget: <code>{target} {currency}</code>\nSaved: <code>{saved} {currency}</code> ({percent}%)\nRemaining: <code>{remaining} {currency}</code>',
+  groupSavingsContributionLogged:
+    '🎉 <code>{amount} {currency}</code> saved by <b>{user}</b> for <b>{name}</b>!\nTotal Saved: <code>{saved} {currency}</code> ({percent}%)',
 };
 
 const am: Record<MessageKey, string> = {
@@ -252,6 +264,13 @@ const am: Record<MessageKey, string> = {
     '📊 <b>{name}</b>\nባጀት፦ <code>{amount} {currency}</code>\nየወጣ፦ <code>{spent} {currency}</code> ({percent}%)\nየቀረ፦ <code>{remaining} {currency}</code>',
   groupBudgetExpenseLogged:
     '✓ <code>{amount} {currency}</code> በ <b>{user}</b> ለ<b>{name}</b> ተመዝግቧል።\nየቀረ ባጀት፦ <code>{remaining} {currency}</code>',
+  groupSavingsJoinNotFound: 'ይህ የቡድን ቁጠባ መጋበዣ ሊንክ ከእንግዲህ አይሰራም ወይም ጊዜው አልፏል።',
+  groupSavingsJoined: '✓ ወደ <b>{name}</b> የቡድን ቁጠባ ተቀላቅለዋል! አሁን አብረው መቆጠብ ይችላሉ።',
+  groupSavingsLinked: '✓ ይህ የቴሌግራም ግሩፕ ከ<b>{name}</b> ጋር ተገናኝቷል! እዚህ የሚመዘገቡ ቁጠባዎች ለዚህ ግብ ይሰላሉ።',
+  groupSavingsStatus:
+    '🎯 <b>{name}</b>\nግብ፦ <code>{target} {currency}</code>\nየተቆጠበ፦ <code>{saved} {currency}</code> ({percent}%)\nየቀረ፦ <code>{remaining} {currency}</code>',
+  groupSavingsContributionLogged:
+    '🎉 <code>{amount} {currency}</code> በ <b>{user}</b> ለ<b>{name}</b> ተቆጥቧል!\nአጠቃላይ የተቆጠበ፦ <code>{saved} {currency}</code> ({percent}%)',
 };
 
 const catalogs: Record<string, Record<MessageKey, string>> = { en, am };

@@ -3,6 +3,7 @@ import type { AiParseService } from '@/modules/ai/ai-parse.service';
 import type { AiInteractionService } from '@/modules/ai/ai-interaction.service';
 import type { BudgetService } from '@/modules/budgets/budget.service';
 import type { GroupBudgetService } from '@/modules/group-budgets/group-budget.service';
+import type { GroupSavingsService } from '@/modules/group-savings/group-savings.service';
 import type { CategoryService } from '@/modules/categories/category.service';
 import type { DebtService } from '@/modules/debts/debt.service';
 import type { EqubService } from '@/modules/equb/equb.service';
@@ -55,6 +56,7 @@ export class TelegramUpdateHandler {
     private readonly savings: SavingsService,
     private readonly categories: CategoryService,
     private readonly groupBudgets: GroupBudgetService,
+    private readonly groupSavings: GroupSavingsService,
     private readonly conversations: ConversationStore,
     private readonly telegram: TelegramBotAdapter,
     private readonly feedback: FeedbackService,
@@ -127,11 +129,21 @@ export class TelegramUpdateHandler {
           await this.handleGroupBudgetJoin(chatId, user, args.slice('gb-'.length));
           return;
         }
+        // Deep link: /start gs-<token> joins a group savings goal.
+        if (args.startsWith('gs-')) {
+          await this.handleGroupSavingsJoin(chatId, user, args.slice('gs-'.length));
+          return;
+        }
         await this.sendWelcome(chatId, user);
         return;
       case 'groupbudget':
       case 'gb':
         await this.handleGroupBudgetCommand(chatId, user, args);
+        return;
+      case 'groupsaving':
+      case 'groupsavings':
+      case 'gs':
+        await this.handleGroupSavingsCommand(chatId, user, args);
         return;
       case 'help':
         await this.sendHelp(chatId, user);
@@ -599,6 +611,160 @@ export class TelegramUpdateHandler {
     await this.telegram.sendMessage({
       chatId,
       text: `<b>Your Group Budgets:</b>\n\n${lines}`,
+      parseMode: 'HTML',
+    });
+  }
+
+  private async handleGroupSavingsJoin(
+    chatId: number,
+    user: AuthenticatedUser,
+    token: string,
+  ): Promise<void> {
+    const gs = await this.groupSavings.findByJoinToken(token);
+    if (!gs) {
+      await this.telegram.sendMessage({
+        chatId,
+        text: t(user.language, 'groupSavingsJoinNotFound'),
+        parseMode: 'HTML',
+      });
+      return;
+    }
+
+    try {
+      await this.groupSavings.joinByToken(token, user.id);
+      await this.telegram.sendMessage({
+        chatId,
+        text: t(user.language, 'groupSavingsJoined', { name: escapeHtml(gs.name) }),
+        parseMode: 'HTML',
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : t(user.language, 'internalError');
+      await this.telegram.sendMessage({
+        chatId,
+        text: escapeHtml(msg),
+        parseMode: 'HTML',
+      });
+    }
+  }
+
+  private async handleGroupSavingsCommand(
+    chatId: number,
+    user: AuthenticatedUser,
+    args: string,
+  ): Promise<void> {
+    const trimmed = args.trim();
+
+    // Link chat: /gs link <token>
+    if (trimmed.startsWith('link ')) {
+      const token = trimmed.slice(5).trim();
+      const gs = await this.groupSavings.findByJoinToken(token);
+      if (!gs) {
+        await this.telegram.sendMessage({
+          chatId,
+          text: t(user.language, 'groupSavingsJoinNotFound'),
+          parseMode: 'HTML',
+        });
+        return;
+      }
+      await this.groupSavings.linkTelegramChat(gs.id, user.id, String(chatId));
+      await this.telegram.sendMessage({
+        chatId,
+        text: t(user.language, 'groupSavingsLinked', { name: escapeHtml(gs.name) }),
+        parseMode: 'HTML',
+      });
+      return;
+    }
+
+    // Save into linked goal: /gs save 5000 [note]
+    if (trimmed.startsWith('save ') || trimmed.startsWith('contribute ')) {
+      const linked = await this.groupSavings.findByTelegramChatId(String(chatId));
+      if (!linked) {
+        await this.telegram.sendMessage({
+          chatId,
+          text: 'This chat is not linked to any group savings goal yet. Link it with <code>/gs link &lt;token&gt;</code> first.',
+          parseMode: 'HTML',
+        });
+        return;
+      }
+
+      const parts = trimmed.split(/\s+/).slice(1);
+      const amount = parts[0]?.trim();
+      if (!amount) {
+        await this.telegram.sendMessage({
+          chatId,
+          text: 'Please specify an amount to save. Example: <code>/gs save 5000 [optional note]</code>',
+          parseMode: 'HTML',
+        });
+        return;
+      }
+      const note = parts.slice(1).join(' ') || undefined;
+
+      try {
+        const updated = await this.groupSavings.addContribution(
+          linked.id,
+          user.id,
+          { amount, note },
+          'TELEGRAM',
+        );
+        const name = user.firstName || user.telegramUsername || 'Member';
+        await this.telegram.sendMessage({
+          chatId,
+          text: t(user.language, 'groupSavingsContributionLogged', {
+            amount,
+            currency: updated.currency,
+            user: escapeHtml(name),
+            name: escapeHtml(updated.name),
+            saved: updated.currentAmount,
+            percent: updated.percent,
+          }),
+          parseMode: 'HTML',
+        });
+        return;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : t(user.language, 'internalError');
+        await this.telegram.sendMessage({
+          chatId,
+          text: escapeHtml(msg),
+          parseMode: 'HTML',
+        });
+        return;
+      }
+    }
+
+    // Check if current chat is linked to a group savings goal
+    const linked = await this.groupSavings.findByTelegramChatId(String(chatId));
+    if (linked) {
+      const details = await this.groupSavings.getById(linked.id, user.id);
+      await this.telegram.sendMessage({
+        chatId,
+        text: t(user.language, 'groupSavingsStatus', {
+          name: escapeHtml(details.name),
+          target: details.targetAmount,
+          saved: details.currentAmount,
+          currency: details.currency,
+          percent: details.percent,
+          remaining: details.remaining,
+        }),
+        parseMode: 'HTML',
+      });
+      return;
+    }
+
+    // Otherwise list user's group savings
+    const list = await this.groupSavings.list(user.id);
+    if (list.length === 0) {
+      await this.telegram.sendMessage({
+        chatId,
+        text: 'You have no group savings goals. Open the Mini App to create one or join with an invite link.',
+        parseMode: 'HTML',
+      });
+      return;
+    }
+
+    const lines = list.map((s) => `• <b>${escapeHtml(s.name)}</b>: ${s.currentAmount} / ${s.targetAmount} ${s.currency} (${s.percent}%)`).join('\n');
+    await this.telegram.sendMessage({
+      chatId,
+      text: `<b>Your Group Savings Goals:</b>\n\n${lines}`,
       parseMode: 'HTML',
     });
   }
