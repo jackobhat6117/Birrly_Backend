@@ -31,7 +31,7 @@ export const config = {
     webhookSecret: env.TELEGRAM_WEBHOOK_SECRET,
     webhookUrl: env.TELEGRAM_WEBHOOK_URL,
     miniAppUrl: env.TELEGRAM_MINI_APP_URL.replace(/\/$/, '') || '',
-    botUsername: env.TELEGRAM_BOT_USERNAME.trim().replace(/^@/, ''),
+    botUsername: env.TELEGRAM_BOT_USERNAME.trim().replace(/^@/, '') || 'BirrlyBot',
   },
   llm: {
     provider: env.LLM_PROVIDER,

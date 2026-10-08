@@ -359,18 +359,20 @@ export class GroupSavingsService {
 
     const members: GroupSavingsMemberDto[] = row.members.map((m) => {
       const u = m.user;
-      const display = [u.firstName, u.lastName].filter(Boolean).join(' ') || (u.telegramUsername ? `@${u.telegramUsername}` : 'Member');
+      const display = u
+        ? ([u.firstName, u.lastName].filter(Boolean).join(' ') || (u.telegramUsername ? `@${u.telegramUsername}` : 'Member'))
+        : 'Member';
       const userTotal = memberContributions.get(m.userId) ?? new Decimal(0);
       const pctOfTotal = totalContributed.isZero() ? 0 : Math.min(100, Math.round(userTotal.div(totalContributed).mul(100).toNumber()));
 
       return {
         id: m.id,
         userId: m.userId,
-        telegramId: u.telegramId,
+        telegramId: u?.telegramId ?? '',
         displayName: display,
-        username: u.telegramUsername,
+        username: u?.telegramUsername ?? null,
         role: m.role,
-        joinedAt: m.joinedAt.toISOString(),
+        joinedAt: m.joinedAt instanceof Date ? m.joinedAt.toISOString() : new Date(m.joinedAt).toISOString(),
         totalContributed: formatMoney(userTotal),
         percentOfTotal: pctOfTotal,
       };
@@ -378,22 +380,26 @@ export class GroupSavingsService {
 
     const recentContributions: GroupSavingsContributionDto[] = row.contributions.map((c) => {
       const u = c.user;
-      const display = [u.firstName, u.lastName].filter(Boolean).join(' ') || (u.telegramUsername ? `@${u.telegramUsername}` : 'Member');
+      const display = u
+        ? ([u.firstName, u.lastName].filter(Boolean).join(' ') || (u.telegramUsername ? `@${u.telegramUsername}` : 'Member'))
+        : 'Member';
       return {
         id: c.id,
         groupSavingsGoalId: c.groupSavingsGoalId,
         amount: formatMoney(toMoney(c.amount.toString())),
         currency: c.currency,
         note: c.note,
-        contributedAt: c.contributedAt.toISOString(),
+        contributedAt: c.contributedAt instanceof Date ? c.contributedAt.toISOString() : new Date(c.contributedAt).toISOString(),
         loggedBy: {
-          id: u.id,
-          telegramId: u.telegramId,
+          id: u?.id ?? c.userId,
+          telegramId: u?.telegramId ?? '',
           displayName: display,
         },
         source: c.source,
       };
     });
+
+    const botUsername = this.config.botUsername || 'BirrlyBot';
 
     return {
       id: row.id,
@@ -405,15 +411,15 @@ export class GroupSavingsService {
       percent,
       reached,
       currency: row.currency,
-      targetDate: row.targetDate ? row.targetDate.toISOString().slice(0, 10) : null,
+      targetDate: row.targetDate instanceof Date ? row.targetDate.toISOString().slice(0, 10) : (row.targetDate ? String(row.targetDate).slice(0, 10) : null),
       joinToken: row.joinToken,
-      joinUrl: `https://t.me/${this.config.botUsername}?start=gs-${row.joinToken}`,
+      joinUrl: `https://t.me/${botUsername}?start=gs-${row.joinToken}`,
       telegramChatId: row.telegramChatId,
       isOwner: row.createdById === currentUserId,
       myRole,
       members,
       recentContributions,
-      createdAt: row.createdAt.toISOString(),
+      createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : new Date(row.createdAt).toISOString(),
     };
   }
 

@@ -391,7 +391,8 @@ export class GroupBudgetService {
       };
     });
 
-    const joinUrl = `https://t.me/${this.config.botUsername}?start=gb-${row.joinToken}`;
+    const botUsername = this.config.botUsername || 'BirrlyBot';
+    const joinUrl = `https://t.me/${botUsername}?start=gb-${row.joinToken}`;
 
     return {
       id: row.id,
